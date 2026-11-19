@@ -35,8 +35,10 @@ the sim; see "Next steps" for what still needs checking in flight.
   touchdown: time, vertical speed, pitch, airspeed, elevator input, centreline offset and distance
   from the threshold); and one combined chart with radio altitude, vertical speed, pitch, airspeed
   and elevator input stacked on a shared time axis, zoomable to 30 s / 15 s / 8 s. Tapping the
-  chart or a height row places a cursor and reads every value at that moment. Previous and Next
-  step through the log.
+  chart or a height row places a cursor and reads every value at that moment. The rollout is drawn
+  as a plain runway strip seen from above, with the threshold stripes, the centreline and the
+  track after touchdown (left of the centreline at the top). Previous and Next step through the
+  log.
 - **Log**: every landing as a table with a filter. A row opens that landing.
 - **Summary** (the first tab): figures across landings, for the last 10, last 30 or all. "All
   aircraft" is one tap; "Choose aircraft" opens a searchable, scrolling tick list with landing

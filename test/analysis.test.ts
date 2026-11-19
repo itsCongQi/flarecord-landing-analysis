@@ -9,7 +9,7 @@ import { crossingTime, heightGates, traceAt } from '../PackageSources/LandingAna
 import { stackSvg, stackTimeAt } from '../PackageSources/LandingAnalyzer/src/ui/components/chartSvg.ts';
 import { aircraftCounts, filterByAircraft, parseSelection, summarize, toggleAircraft } from '../PackageSources/LandingAnalyzer/src/core/summary.ts';
 import { DEFAULT_SETTINGS, Units, group, parseSettings, runwayMarkings } from '../PackageSources/LandingAnalyzer/src/core/units.ts';
-import { dispersionStrip, runwayView } from '../PackageSources/LandingAnalyzer/src/ui/components/runwaySvg.ts';
+import { dispersionStrip, rolloutView, runwayView } from '../PackageSources/LandingAnalyzer/src/ui/components/runwaySvg.ts';
 import { RUNWAY, simulate, type Scenario } from './simulate.ts';
 
 async function run(sc: Partial<Scenario> = {}): Promise<LandingRecord[]> {
@@ -270,4 +270,24 @@ test('summary aircraft selection: tick on and off, all by default', () => {
   assert.equal(parseSelection('{oops'), null);
   assert.equal(parseSelection('[1,2]'), null);
   assert.deepEqual(parseSelection('["A320"]'), ['A320']);
+});
+
+test('rollout view: top-down strip with left of the centreline drawn above it', async () => {
+  const rec = (await run({ lateralM: -6 }))[0];
+  const tr = rec.trace!;
+  const u = new Units(DEFAULT_SETTINGS);
+  const view = rolloutView(rec.summary, tr, u, 1100)!;
+  assert.ok(view.svg.includes('>LEFT<') && view.svg.includes('>RIGHT<'));
+  assert.ok(/TOUCHDOWN \d+ ft L</.test(view.svg), 'touchdown offset is labelled with its side');
+  assert.ok(view.svg.includes('>THR<'));
+  // The centreline is at y = 94 in the drawing; a touchdown left of it sits above (smaller y).
+  const cy = Number(/<circle cx="[\d.]+" cy="([\d.]+)" r="6.5"/.exec(view.svg)![1]);
+  assert.ok(cy < 94, `left plots above the centreline: ${cy}`);
+  const r = (await run({ lateralM: 6 }))[0];
+  const right = rolloutView(r.summary, r.trace!, u, 1100)!;
+  assert.ok(Number(/<circle cx="[\d.]+" cy="([\d.]+)" r="6.5"/.exec(right.svg)![1]) > 94);
+  assert.ok(rolloutView(rec.summary, tr, new Units({ ...DEFAULT_SETTINGS, dist: 'm' }), 1100)!.caption.includes('45 m'));
+  // Nothing to draw without a matched runway, or for a trace recorded before positions were kept.
+  assert.equal(rolloutView({ ...rec.summary, geometry: null }, tr, u, 1100), null);
+  assert.equal(rolloutView(rec.summary, { ...tr, along: undefined }, u, 1100), null);
 });

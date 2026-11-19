@@ -224,3 +224,99 @@ export function dispersionStrip(landings: readonly LandingSummary[], u: Units, p
   p.push('</svg>');
   return p.join('');
 }
+
+/**
+ * The Landing page's rollout view: the ground track after touchdown drawn on a plain top-down
+ * runway, to show how far the aircraft was from the centreline and where. The runway runs left
+ * to right in the landing direction, so the top of the drawing is the left of the centreline
+ * and the bottom is the right. Only the threshold stripes and the centreline are painted; the
+ * edges are the real runway width, so a deviation reads against the pavement it happened on.
+ */
+export function rolloutView(s: LandingSummary, tr: LandingTrace, u: Units, pxWidth: number): RunwayView | null {
+  const g = s.geometry;
+  if (!g || !tr.along) return null;
+  const rw = g.runway;
+  // Samples from touchdown on, with a position.
+  const pts: { t: number; along: number; cross: number }[] = [];
+  for (let i = 0; i < tr.t.length; i++) {
+    const a = tr.along[i];
+    const c = tr.centerline[i];
+    if (tr.t[i] >= 0 && a !== null && a !== undefined && c !== null) pts.push({ t: tr.t[i], along: a, cross: c });
+  }
+  if (pts.length < 2) return null;
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+
+  // Scale: from the threshold to a little past the end of the recorded rollout, in whole ticks.
+  let tickM = u.s.dist === 'ft' ? 500 / 3.280839895 : 150;
+  const needed = Math.max(last.along * 1.04, tickM * 2);
+  while (needed / tickM > 10) tickM *= 2;
+  const windowM = Math.ceil(needed / tickM) * tickM;
+  const VB_H = 196;
+  const y0 = 44;
+  const y1 = 144;
+  const mid = (y0 + y1) / 2;
+  const x = (m: number) => THR_X + (m / windowM) * (VB_W - THR_X);
+  const pxPerM = (y1 - y0) / rw.widthM;
+  // A track that leaves the pavement is drawn just outside the edge rather than off the drawing.
+  const y = (crossM: number) => Math.max(y0 - 14, Math.min(y1 + 14, mid + crossM * pxPerM));
+  const endX = Math.min(VB_W, x(rw.lengthM));
+
+  const p: string[] = [];
+  p.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VB_W} ${VB_H}" width="${Math.round(pxWidth)}" height="${Math.round((pxWidth * VB_H) / VB_W)}" class="la-rw">`);
+  p.push(`<rect x="${THR_X}" y="${y0}" width="${n(endX - THR_X)}" height="${y1 - y0}" fill="${SURFACE}"/>`);
+  p.push(`<line x1="${THR_X}" y1="${y0}" x2="${n(endX)}" y2="${y0}" stroke="${PAINT}" stroke-width="1.5" opacity="0.7"/>`);
+  p.push(`<line x1="${THR_X}" y1="${y1}" x2="${n(endX)}" y2="${y1}" stroke="${PAINT}" stroke-width="1.5" opacity="0.7"/>`);
+  p.push(`<line x1="${THR_X}" y1="${y0}" x2="${THR_X}" y2="${y1}" stroke="${PAINT}" stroke-width="3" opacity="0.85"/>`);
+  if (endX < VB_W) p.push(`<line x1="${n(endX)}" y1="${y0}" x2="${n(endX)}" y2="${y1}" stroke="${PAINT}" stroke-width="3" opacity="0.85"/>`);
+  // Threshold stripes, so the drawing reads as a runway seen from above.
+  const sw = (y1 - y0) / 15;
+  p.push(`<g fill="${PAINT}" opacity="0.8">`);
+  for (let i = 0; i < 4; i++) {
+    p.push(`<rect x="${THR_X + 6}" y="${n(y0 + sw * 0.75 + i * sw * 1.6)}" width="27" height="${n(sw)}"/>`);
+    p.push(`<rect x="${THR_X + 6}" y="${n(y1 - sw * 1.75 - i * sw * 1.6)}" width="27" height="${n(sw)}"/>`);
+  }
+  p.push('</g>');
+  p.push(`<line x1="${THR_X + 44}" y1="${mid}" x2="${n(endX)}" y2="${mid}" stroke="${PAINT}" stroke-width="2" stroke-dasharray="27 18" opacity="0.55"/>`);
+  p.push(`<text x="${THR_X - 12}" y="${y0 + 16}" class="la-rw-side" text-anchor="end">LEFT</text>`);
+  p.push(`<text x="${THR_X - 12}" y="${y1 - 8}" class="la-rw-side" text-anchor="end">RIGHT</text>`);
+
+  // The track, then where it was furthest from the centreline.
+  p.push(`<polyline points="${pts.map((q) => `${n(x(q.along))},${n(y(q.cross))}`).join(' ')}" fill="none" stroke="${ACCENT}" stroke-width="2.5" stroke-linejoin="round"/>`);
+  let far = first;
+  for (const q of pts) if (Math.abs(q.cross) > Math.abs(far.cross)) far = q;
+  const side = (m: number) => (Math.abs(u.dist(m)) < 0.5 ? '' : m >= 0 ? ' R' : ' L');
+  const off = (m: number) => `${group(Math.abs(u.dist(m)))} ${u.distUnit}${side(m)}`;
+  const labelX = (xx: number, half: number) => Math.max(THR_X + half, Math.min(VB_W - half, xx));
+
+  const tdX = x(first.along);
+  p.push(`<line x1="${n(tdX)}" y1="${y0 - 18}" x2="${n(tdX)}" y2="${n(y(first.cross) - 6.5)}" stroke="${ACCENT}" stroke-width="1.5"/>`);
+  p.push(`<circle cx="${n(tdX)}" cy="${n(y(first.cross))}" r="6.5" fill="#0b0d10" stroke="${ACCENT}" stroke-width="2.5"/>`);
+  p.push(`<text x="${n(labelX(tdX, 90))}" y="${y0 - 24}" class="la-rw-call" fill="${ACCENT}" text-anchor="middle">TOUCHDOWN ${off(first.cross)}</text>`);
+
+  const endPx = x(last.along);
+  p.push(`<circle cx="${n(endPx)}" cy="${n(y(last.cross))}" r="4" fill="${ACCENT}"/>`);
+  // Call out the largest deviation only when it is a different place from the touchdown itself.
+  if (far !== first && Math.abs(x(far.along) - tdX) > 190 && Math.abs(u.dist(far.cross)) >= 0.5) {
+    const fx = x(far.along);
+    const below = far.cross >= 0;
+    p.push(`<line x1="${n(fx)}" y1="${n(y(far.cross))}" x2="${n(fx)}" y2="${below ? y1 + 12 : y0 - 18}" stroke="${PAINT}" stroke-width="1" opacity="0.7"/>`);
+    p.push(`<text x="${n(labelX(fx, 80))}" y="${below ? y1 + 24 : y0 - 24}" class="la-rw-call" fill="${PAINT}" text-anchor="middle">FURTHEST ${off(far.cross)}</text>`);
+  }
+
+  // Distance scale from the threshold.
+  for (let m = 0; m <= windowM + 1; m += tickM) {
+    const xx = x(m);
+    const lastTick = m + tickM > windowM + 1;
+    p.push(`<line x1="${n(xx)}" y1="${VB_H - 34}" x2="${n(xx)}" y2="${VB_H - 26}" stroke="#2a323c" stroke-width="1"/>`);
+    p.push(`<text x="${n(lastTick ? VB_W - 6 : xx)}" y="${VB_H - 10}" class="la-rw-label" text-anchor="${lastTick ? 'end' : 'middle'}">${m === 0 ? 'THR' : `${Math.round(u.dist(m))}${lastTick ? ' ' + u.distUnit : ''}`}</text>`);
+  }
+  p.push('</svg>');
+
+  const exaggeration = pxPerM / ((VB_W - THR_X) / windowM);
+  return {
+    svg: p.join(''),
+    caption: `Runway width ${group(u.dist(rw.widthM))} ${u.distUnit} · lateral scale x${exaggeration >= 10 ? exaggeration.toFixed(0) : exaggeration.toFixed(1)}`,
+    note: `Furthest from the centreline ${off(far.cross)}, at ${group(u.dist(far.along))} ${u.distUnit} from the threshold · recorded for ${last.t.toFixed(0)} s after touchdown, ending ${off(last.cross)}`,
+  };
+}

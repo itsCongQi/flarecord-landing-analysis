@@ -61,6 +61,7 @@ export function simulate(sc: Partial<Scenario> = {}): Sample[] {
   // Aim to touch down ~400 m past the threshold: work out where along-track we start.
   // Rough: time to descend = agl / |vs| plus flare time.
   let along = 400 - gsMs * (700 / Math.abs(approachVs)) * 60 - gsMs * 3;
+  let groundT = 0;
   let onGround = false;
   let phase: 'approach' | 'flare' | 'float' | 'ground' | 'bounce' = 'approach';
   let floatLeft = s.floatS;
@@ -128,7 +129,10 @@ export function simulate(sc: Partial<Scenario> = {}): Sample[] {
       g = g > 1 ? Math.max(1, g - 2 * dt) : 1;
     }
     along += gs * 0.514444 * dt;
-    const pos = offsetLatLon(RUNWAY.thresholdLat, RUNWAY.thresholdLon, -along, s.lateralM); // runway 270: along = west, right = north
+    // On the ground the track wanders off the touchdown offset, then settles back towards the centreline.
+    if (phase === 'ground') groundT += dt;
+    const lateral = s.lateralM * Math.exp(-groundT / 12) + (1.5 + Math.abs(s.lateralM) * 0.5) * Math.sin(groundT * 0.3) * Math.exp(-groundT / 10);
+    const pos = offsetLatLon(RUNWAY.thresholdLat, RUNWAY.thresholdLon, -along, lateral); // runway 270: along = west, right = north
     const sample: Sample = {
       t,
       agl,
