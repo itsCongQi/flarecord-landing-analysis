@@ -1,156 +1,106 @@
-# Flarecord for MSFS 2024 (prototype)
+<p align="center"><img src="PackageSources/Flarecord/Assets/app-icon.svg" width="96" alt="Flarecord icon"></p>
 
-An in-sim landing analysis addon that runs entirely inside Microsoft Flight Simulator 2024 as a
-third-party **EFB tablet app**. No external exe, no SimConnect client. It records every approach,
-detects touchdown, bounces and the flare, shows where the aircraft touched down on the runway,
-draws graphs of the last seconds before touchdown, and keeps a log of past landings across
-sessions. It is a monitoring and analysis tool: it reports measured values and does not rate or
-coach.
+# Flarecord
 
-Status: **prototype**. The analysis core, the log, the units and the runway drawing are tested
-against simulated landings (`npm test`). The app builds against the SDK's EFB sample and loads in
-the sim; see "Next steps" for what still needs checking in flight.
+**A landing monitor for Microsoft Flight Simulator 2024 that lives on the in-sim tablet.**
 
-> **This repository is source code, not an installable addon.** Copying it into the sim's
-> Community folder does nothing (there is no `manifest.json`, `layout.json` or built JS yet).
-> Build it first, see `PackageSources/Flarecord/README-build.md`.
+Flarecord records every landing you fly and shows you exactly what happened: where you touched
+down, how the flare went, and what the aircraft was doing at each height on the way in. It runs
+entirely inside the simulator as an EFB app. There is nothing to start alongside the sim and
+nothing to connect.
 
-## What it measures
+It is a measuring instrument. It reports what happened and leaves the judgement to you: no
+grades and no coaching.
 
-| Area | Measured | Notes |
-|---|---|---|
-| Touchdown | sink rate, peak G (first 1 s after contact), IAS, GS, pitch, bank, crab | sink rate prefers the sim's own `PLANE TOUCHDOWN NORMAL VELOCITY` |
-| Wind | headwind and crosswind components at contact | from ambient wind vs heading |
-| Bounces | count of re-contacts after ≥0.2 s airborne; touch-and-go detection | |
-| Flare | flare start height and time, sink rate at flare start, pitch added, float time below 5 ft | own detector, see below |
-| Runway | airport and runway, distance past the landing threshold (the displaced threshold where there is one), signed centreline offset, ground track | via the sim's navdata (FacilityLoader) |
-| Rollout | centreline offset through the rollout until 30 kt | |
-| Landing index | optional single 0 to 100 figure, hidden unless switched on in Settings | own weights, see below |
+![The Landing page](docs/images/landing.png)
 
-### Screens
+## What you get
 
-- **Landing**: everything about the selected landing on one scrolling page. A top-down runway view
-  with the touchdown point, the approach and rollout ground track and the flare start; the values
-  measured at contact; a table of values at set heights (200, 100, 50, 30, 20 and 10 ft, then
-  touchdown: time, vertical speed, pitch, airspeed, elevator input, centreline offset and distance
-  from the threshold); and one combined chart with radio altitude, vertical speed, pitch, airspeed
-  and elevator input stacked on a shared time axis, zoomable to 30 s / 15 s / 8 s. Tapping the
-  chart or a height row places a cursor and reads every value at that moment. The moment of passing
-  over the threshold is marked on the runway view, in the table and on the chart with the radio
-  altitude there. The rollout is drawn
-  as a plain runway strip seen from above, with the threshold stripes, the centreline and the
-  track after touchdown (left of the centreline at the top). Previous and Next step through the
-  log.
-- **Log**: every landing as a table with a filter. A row opens that landing. A landing that has not
-  been opened yet has an amber dot, and Summary shows a notice for it that opens it. Times are also
-  given as minutes, hours or days ago.
-- **Summary** (the first tab): figures across landings, for the last 10, last 30 or all. "All
-  aircraft" is one tap; "Choose aircraft" opens a searchable, scrolling tick list with landing
-  counts, and the selection is remembered.
-  Medians, the touchdown points overlaid on one runway outline, and a landing by landing graph of
-  vertical speed, peak load, touchdown point, centreline offset and flare height. Tapping the
-  graph opens that landing.
-- **Settings**: units for runway distance (ft or m), height (ft or m), vertical speed (fpm or m/s)
-  and speed (kt or km/h), defaulting to feet, fpm and knots, and the landing index switch. Landings
-  are stored in fixed units and converted for display.
+- **Automatic recording.** Flarecord arms below 200 ft on approach and saves the landing when you
+  slow down. It works in any aircraft that has the tablet.
+- **Touchdown point on the runway.** A top-down runway view with your approach and rollout track,
+  the flare start, the height over the threshold and the touchdown point, drawn over the
+  touchdown zone and markings for that runway.
+- **Values at contact.** Vertical speed, peak load, airspeed and ground speed, pitch, bank, crab,
+  headwind and crosswind, flare height and duration, float time and bounces.
+- **Values by height.** One row each for 200, 100, 50, 30, 20 and 10 ft, the threshold and
+  touchdown, so "what were my pitch and sink rate at 50 ft" is a single glance.
+- **Approach and flare chart.** Radio altitude, vertical speed, pitch, airspeed and elevator input
+  stacked on one time axis. Tap anywhere to read every value at that moment.
+- **Rollout view.** Your track after touchdown over a plain runway seen from above, to show how
+  far you were from the centreline and where.
+- **A log that persists.** Every landing is kept between sessions, with new ones marked until you
+  open them.
+- **Summary across landings.** Medians, touchdown points overlaid on one runway, and a
+  landing-by-landing trend, for all aircraft or the ones you tick.
+- **Your units.** Feet or metres, fpm or m/s, knots or km/h.
 
-### Runway markings
+## Screens
 
-The sim's runway data gives the threshold, heading, length, width and displaced threshold, but not
-the paint. The runway view therefore draws the markings at their standard positions: with
-distances in feet, the aiming point at 1,000 ft and touchdown zone bars every 500 ft to 3,000 ft;
-with distances in metres, the aiming point at 150 to 400 m depending on runway length and bars
-every 150 m to 900 m. Markings past mid-runway are left out. An airport with non-standard paint
-will differ slightly; the touchdown distance itself is measured, not drawn.
+### Summary
 
-### Flare detection (this addon's own method)
+Opens first. Figures across your last 10, last 30 or all landings, filtered by aircraft, with a
+notice when a new landing is waiting.
 
-1. Reference attitude = mean pitch between 100 ft and 50 ft.
-2. Attitude-based: walking back from touchdown, the flare starts right after the last moment the
-   smoothed pitch was within 0.5° of the reference (only if it touched down ≥1° above it and
-   below 60 ft).
-3. Fallback, input-based: start of the final sustained pull, where smoothed elevator input last
-   crossed 35% of its rise from the approach baseline to its peak.
+![The Summary page](docs/images/summary.png)
 
-### Landing index (optional, this addon's own weights)
+### Log
 
-Sink rate 25 · Peak G 15 · Touchdown zone 20 · Centreline 15 · Alignment 10 (crab allowance grows
-with crosswind) · Attitude 10 · No bounce 5. If no runway is identified, the runway categories
-are left out and the rest scaled to 100. A float over 4 s costs up to 10 points.
-The index is off by default; switch it on in Settings.
+Every landing as a table, newest first, with a filter. An amber dot marks a landing you have not
+opened yet.
 
-### Landing log
+![The Log page](docs/images/log.png)
 
-Stored in the sim's DataStore (`SetStoredData`/`GetStoredData`), which persists between sessions.
-Up to 500 landings; graphs kept for the newest 60 (about 8 KB each); the index is split into
-pages of 50 so no single key passes about 70 KB. "Copy as CSV" is planned for moving data out of
-the sim.
+## Install
 
-## How it compares with the X-Plane plugin you linked
+Flarecord is at an early stage and there is no packaged download yet. For now it is built from
+source with the MSFS 2024 SDK:
 
-Feature parity on: touchdown stats, peak G, wind components, bounce count, runway
-identification, threshold distance, signed centreline deviation, pre-touchdown and rollout
-graphs, flare marker, automatic persistent log.
+1. Install the MSFS 2024 SDK and its samples.
+2. Follow [`PackageSources/Flarecord/README-build.md`](PackageSources/Flarecord/README-build.md)
+   to build the package.
+3. Copy the resulting `flarecord-landing-monitor` folder into your Community folder and start the
+   sim. Flarecord appears on the tablet in every aircraft.
 
-Different by design: own flare algorithm (attitude first, input fallback; no separate
-"pre-flare" marker yet), no rating by default, a runway view with standard markings, a single EFB
-app instead of separate windows, DataStore log instead of a CSV file.
+Copying this repository into the Community folder as it is does nothing, because it is source
+code and not a built package.
 
-Not included (yet): the live HUD of forces (thrust, drag, lift-to-weight). Most of those
-values are not exposed as SimVars for every aircraft. A "Live" page with G, AoA and crab is an
-easy addition if wanted.
+## Using it
 
-## SDK findings (checked 19 Nov 2026)
+1. Fly an approach. The status strip at the top of the app shows **MONITORING**, then **ARMED**
+   below 200 ft, then **RECORDING** through the rollout.
+2. After you slow down, open the tablet and Flarecord. Summary shows a notice for the new landing.
+3. Open the landing, tap the chart or a height row to inspect a moment, and use Previous and Next
+   to step through the log.
 
-- **EFB apps are a supported SDK feature.** You build an app, not a custom EFB; once packaged it
-  appears on the EFB of every aircraft. Built from the SDK's EFB TemplateApp with Node 18+.
-  [EFB API docs](https://docs.flightsimulator.com/msfs2024/retail/programming-apis/efb/electronic-flight-bag-api/)
-- **Background capture.** `App` has `BootMode` (COLD / WARM / HOT) and an `install()` hook, and
-  `SuspendMode` (SLEEP / TERMINATE). The capture service starts in `install()` so it does not
-  depend on the app being open. The docs do not state in words whether app code runs while the
-  tablet is closed, but a released EFB app (MSFS Passport 2024) says it "tracks your flying in
-  the background (even with the EFB closed)", which is strong evidence it works.
-  **Still to confirm in our own test flight.** Fallback if it doesn't: a small WASM module that
-  records and hands data to the app over the Comm Bus.
-- **Reading data.** `SimVar.GetSimVarValue` works the same in EFB apps; Asobo staff advise
-  polling in `onUpdate` and minimising reads and DOM updates. We sample 15 SimVars at 20 Hz and
-  only push to the UI at 4 Hz.
-- **Persistence.** DataStore is saved with the user's save data (cloud save). One devsupport
-  report says values were lost for some users who quit through the in-game "Quit to desktop";
-  Asobo could not reproduce it. The size limit is not documented, so we cap per-key size and total
-  landings. Our log writes after every landing, so at worst the last landing of a session is
-  at risk.
+Until your first landing the app shows example data, labelled as such.
 
-## Layout
+## Good to know
+
+- **Runway markings are derived, not read from the sim.** The simulator does not expose painted
+  markings, so Flarecord draws what the standards call for on that runway: FAA rules at US
+  airports and ICAO rules elsewhere, scaled to the runway. Scenery that differs will not match.
+- **Runway identification comes from the sim's navigation data.** If no runway is matched, the
+  landing is still recorded, without the runway views.
+- **Your data stays in the sim.** Landings are stored in the simulator's own data store, up to
+  500 of them, with charts for the newest 60.
+- **Still being proven in flight.** The analysis is tested against simulated landings, and the
+  app builds and loads in the sim. Recording with the tablet closed, and runway matching across
+  many airports, are still being checked.
+
+## For developers
+
+The analysis core is plain TypeScript with no simulator dependencies and is tested in Node:
 
 ```
-PackageSources/Flarecord/
-  src/core/            plain TS, no sim dependencies (tested in Node)
-    types.ts           Sample, LandingSummary, LandingTrace ...
-    LandingDetector.ts state machine: idle → armed (<200 ft, descending) → rollout → record
-    flare.ts           flare detection
-    score.ts           the optional landing index
-    units.ts           display units, settings, standard runway marking positions
-    summary.ts         medians across landings, aircraft list
-    gates.ts           values at set heights, interpolated trace read-out
-    geo.ts             runway geometry, wind components, runway matching
-  src/storage/         LandingLog (paged DataStore log), DataStoreAdapter
-  src/sim/             SimVarSampler (20 Hz SimVar reads), RunwayProvider (FacilityLoader)
-  src/ui/              pages: Landing, Log, Summary, Settings; chartSvg and runwaySvg
-                       (dependency-free SVG drawings)
-  src/AnalyzerService.ts   always-on capture, started from App.install()
-  src/Flarecord.tsx  EFB App + AppView registration
-  README-build.md      how to drop this into the SDK's EFB sample and build it
-test/                  synthetic approach generator + tests
+npm install
+npm test
 ```
 
-Run the tests: `npm install && npm test` (Node 22.6+; uses Node's built-in TypeScript stripping).
+Node 22.6 or newer is required. How things are measured, the flare detection method, storage,
+and notes on the MSFS 2024 EFB platform are in [docs/TECHNICAL.md](docs/TECHNICAL.md).
 
-## Next steps
+## Disclaimer
 
-1. Build inside the SDK EFB sample (README-build.md) and fix any `efb_api` API differences.
-2. Test flight: confirm capture with the tablet closed, the SimVar sign constants in
-   `SimVarSampler.ts`, and runway identification at a few airports, including one with a
-   displaced threshold.
-3. Confirm DataStore survives a sim restart (quit both ways).
-4. Then: CSV copy-out, per-aircraft filters, runway markings chosen by region instead of by unit.
+Flarecord is an independent project for flight simulation only. It is not affiliated with or
+endorsed by Microsoft or Asobo Studio, and it must not be used for real-world flying.

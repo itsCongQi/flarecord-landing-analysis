@@ -8,7 +8,7 @@ import type { LandingRecord } from '../PackageSources/Flarecord/src/core/types.t
 import { crossingTime, heightGates, thresholdCrossing, traceAt } from '../PackageSources/Flarecord/src/core/gates.ts';
 import { stackSvg, stackTimeAt } from '../PackageSources/Flarecord/src/ui/components/chartSvg.ts';
 import { aircraftCounts, filterByAircraft, parseSelection, summarize, toggleAircraft } from '../PackageSources/Flarecord/src/core/summary.ts';
-import { DEFAULT_SETTINGS, Units, group, parseSettings, runwayMarkings } from '../PackageSources/Flarecord/src/core/units.ts';
+import { DEFAULT_SETTINGS, Units, group, parseSettings, runwayMarkings, usesFaaMarkings } from '../PackageSources/Flarecord/src/core/units.ts';
 import { dispersionStrip, rolloutView, runwayView } from '../PackageSources/Flarecord/src/ui/components/runwaySvg.ts';
 import { fmtAgo } from '../PackageSources/Flarecord/src/ui/format.ts';
 import { RUNWAY, simulate, type Scenario } from './simulate.ts';
@@ -142,13 +142,44 @@ test('units: feet, fpm and knots by default; settings survive bad data', () => {
 
 test('runway markings follow the unit standard and stop before mid-runway', () => {
   const faa = runwayMarkings(3000, 'ft');
-  assert.ok(Math.abs(faa.aimingM - 304.8) < 0.1);
+  assert.ok(Math.abs(faa.aimingM! - 304.8) < 0.1);
   assert.deepEqual(faa.bars.map((b) => Math.round(b.atM * 3.28084)), [500, 1500, 2000, 2500, 3000]);
-  assert.equal(runwayMarkings(700, 'ft').bars.length, 1, 'short runway: only the 500 ft bars');
+  // FAA: nothing within 900 ft of the middle of the runway.
+  assert.deepEqual(runwayMarkings(1500, 'ft').bars.map((b) => Math.round(b.atM * 3.28084)), [500, 1500]);
+  assert.equal(runwayMarkings(700, 'ft').bars.length, 0);
   const icao = runwayMarkings(3000, 'm');
   assert.equal(icao.aimingM, 400);
   assert.deepEqual(icao.bars.map((b) => b.atM), [150, 300, 600, 750, 900]);
+  assert.deepEqual(icao.bars.map((b) => b.count), [3, 3, 2, 1, 1], 'distance coded');
   assert.equal(runwayMarkings(1000, 'm').aimingM, 250);
+  assert.deepEqual(runwayMarkings(2000, 'm').bars.map((b) => b.atM), [150, 450, 600], '4 pairs, the one at the aiming point left out');
+});
+
+test('runway markings follow the airport, the runway type and its width', () => {
+  for (const id of ['KSEA', 'PANC', 'PHNL', 'TJSJ', '1S2']) assert.equal(usesFaaMarkings(id), true, id);
+  for (const id of ['EGLL', 'CYVR', 'LOWI', 'RJTT', 'PTKK', 'LF2921']) assert.equal(usesFaaMarkings(id), false, id);
+  // The airport decides the rules; the distance unit only decides the scale under the drawing.
+  const us = runwayMarkings(3000, 'm', { airportIdent: 'KSEA' });
+  assert.equal(us.standard, 'FAA');
+  assert.ok(Math.abs(us.aimingM! - 304.8) < 0.1 && us.tickM === 150);
+  const eu = runwayMarkings(3000, 'ft', { airportIdent: 'EGLL' });
+  assert.equal(eu.standard, 'ICAO');
+  assert.equal(eu.aimingM, 400);
+  assert.equal(eu.tdzM, 900);
+  assert.ok(Math.abs(eu.tickM * 3.280839895 - 500) < 1e-6);
+  assert.ok(Math.abs(us.tdzM! * 3.280839895 - 3000) < 1e-6);
+  assert.equal(runwayMarkings(1200, 'm', { airportIdent: 'LOWI' }).tdzM, 600, 'never past the middle of the runway');
+  // No ILS: aiming point only on a long runway, threshold and centreline on a short one.
+  const visual = runwayMarkings(1800, 'm', { airportIdent: 'EDXX', ils: false });
+  assert.equal(visual.painted, 'aiming');
+  assert.ok(visual.aimingM === 300 && visual.bars.length === 0 && visual.tdzM === null);
+  const strip = runwayMarkings(700, 'm', { airportIdent: 'EDXX', ils: false });
+  assert.ok(strip.painted === 'basic' && strip.aimingM === null);
+  // Unpaved: nothing painted.
+  const grass = runwayMarkings(900, 'm', { airportIdent: 'EDXX', hard: false });
+  assert.ok(grass.painted === 'none' && grass.thresholdStripes === 0 && grass.aimingM === null && grass.bars.length === 0);
+  // Threshold stripes by width, per side.
+  assert.deepEqual([18, 23, 30, 45, 60].map((w) => runwayMarkings(3000, 'm', { widthM: w }).thresholdStripes), [2, 3, 4, 6, 8]);
 });
 
 test('trace carries the ground track and the runway view draws it', async () => {
@@ -169,7 +200,11 @@ test('trace carries the ground track and the runway view draws it', async () => 
   assert.ok(feet.svg.includes('>4000 ft<') && feet.caption.startsWith('First 4,000 ft of 9,843 ft · width 148 ft'), feet.caption);
   assert.ok(/aiming point \(1,000 ft\)/.test(feet.note), feet.note);
   const metres = runwayView(rec.summary, tr, new Units({ ...DEFAULT_SETTINGS, dist: 'm' }), 1100)!;
-  assert.ok(metres.svg.includes('>1200 m<') && /aiming point \(400 m\)/.test(metres.note), metres.note);
+  // The test airport is in the US: FAA positions whatever the unit, and the caption says so.
+  assert.ok(metres.svg.includes('>1200 m<') && /aiming point \(305 m\)/.test(metres.note), metres.note);
+  assert.ok(feet.caption.endsWith('standard FAA markings') && feet.svg.includes('>TDZ 3,000 ft<'), feet.caption);
+  const grass = runwayView({ ...rec.summary, geometry: { ...rec.summary.geometry!, runway: { ...RUNWAY, hard: false } } }, tr, new Units(DEFAULT_SETTINGS), 1100)!;
+  assert.ok(grass.caption.endsWith('unpaved, no markings') && !grass.svg.includes('TDZ') && /past the threshold$/.test(grass.note), grass.note);
 
   // A long landing widens the view instead of drawing the marker off the edge.
   const long = { ...rec.summary, geometry: { ...rec.summary.geometry!, distFromThresholdM: 1700 } };

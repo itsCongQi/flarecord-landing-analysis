@@ -1,7 +1,7 @@
 import { aircraftCounts, filterByAircraft, parseSelection, summarize, toggleAircraft, type AircraftSelection } from '../../core/summary';
 import type { LandingSummary } from '../../core/types';
 import { group } from '../../core/units';
-import { stackSvg, stackTimeAt } from '../components/chartSvg';
+import { stackSvg } from '../components/chartSvg';
 import { dispersionStrip } from '../components/runwaySvg';
 import { esc, fmtAgo, where } from '../format';
 import { EXAMPLE_NOTE, PageBase } from './PageBase';
@@ -13,8 +13,7 @@ const SEARCH_FROM = 9;
 
 /**
  * Summary: how the logged landings compare with each other. Medians, the touchdown points
- * overlaid on one runway outline, and each landing's key figures in order. Tapping the trend
- * graph opens that landing.
+ * overlaid on one runway outline, and each landing's key figures in order.
  *
  * Aircraft filter: "All aircraft" is one tap and is the default. "Choose aircraft" opens a tick
  * list (most flown first, with landing counts) that scrolls and can be searched, so it stays
@@ -86,8 +85,8 @@ export class SummaryPage extends PageBase {
       ${
         seq.length >= 2
           ? `<div class="la-panel la-chart-box">
-              <div class="la-panel-head"><span class="la-label">LANDING BY LANDING · oldest to newest</span><span class="la-note">Tap a point to open that landing.</span></div>
-              <div class="la-stack-hit">${this.trend(seq)}</div>
+              <div class="la-panel-head"><span class="la-label">LANDING BY LANDING · oldest to newest</span></div>
+              ${this.trend(seq)}
             </div>`
           : '<div class="la-panel"><div class="la-panel-empty">The landing by landing graph appears once there are two landings to compare.</div></div>'
       }`;
@@ -133,15 +132,6 @@ export class SummaryPage extends PageBase {
     search?.addEventListener('input', applySearch);
     search?.addEventListener('change', applySearch);
     if (this.search) applySearch();
-    const hit = el.querySelector<HTMLDivElement>('.la-stack-hit');
-    hit?.addEventListener('click', (e) => {
-      const box = hit.getBoundingClientRect();
-      if (box.width <= 0) return;
-      const n = Math.round(stackTimeAt(seq.map((_, i) => i + 1), ((e as MouseEvent).clientX - box.left) / box.width));
-      const s = seq[Math.max(1, Math.min(seq.length, n)) - 1];
-      this.props.svc.selected.set(s);
-      this.props.go('Landing');
-    });
   }
 
   private aircraftFilter(fleet: { aircraft: string; count: number }[], sel: AircraftSelection, ticked: (name: string) => boolean): string {
