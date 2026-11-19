@@ -5,6 +5,8 @@ import { LandingDetector, fitSinkRate, groundOffset } from '../PackageSources/Fl
 import { METHODS, method } from '../PackageSources/Flarecord/src/ui/methods.ts';
 import { runwayRelative, windComponents, matchRunway } from '../PackageSources/Flarecord/src/core/geo.ts';
 import { LandingLog, MemoryStore } from '../PackageSources/Flarecord/src/storage/LandingLog.ts';
+import { FileBridge } from '../PackageSources/Flarecord/src/storage/FileBridge.ts';
+import { MirroredStore } from '../PackageSources/Flarecord/src/storage/MirroredStore.ts';
 import type { LandingRecord } from '../PackageSources/Flarecord/src/core/types.ts';
 import { crossingTime, heightGates, thresholdCrossing, traceAt } from '../PackageSources/Flarecord/src/core/gates.ts';
 import { stackSvg, stackTimeAt } from '../PackageSources/Flarecord/src/ui/components/chartSvg.ts';
@@ -467,4 +469,148 @@ test('fast sampling is requested from arming until shortly after contact', () =>
 test('every explained figure has a title and a text', () => {
   for (const k of ['vs', 'g', 'crab', 'wind', 'flare', 'pitchChange', 'float', 'bounces', 'height', 'position']) assert.ok(method(k), k);
   for (const m of METHODS) assert.ok(m.title.length > 3 && m.text.length > 40 && !m.text.includes('<'), m.key);
+});
+
+// ---- File storage ---------------------------------------------------------------------------
+
+/** Stands in for the WASM module: one "file" per key, answering over a fake Comm Bus. */
+function fakeModule(files = new Map<string, string>(), opts: { dead?: boolean } = {}) {
+  let handler: (d: string) => void = () => undefined;
+  const log: string[] = [];
+  const bus = {
+    on: (_e: string, fn: (d: string) => void) => void (handler = fn),
+    send: (_e: string, data: string) => {
+      if (opts.dead) return;
+      const [id, op, key] = data.split('\n', 3);
+      const value = data.slice(id.length + op.length + key.length + 3);
+      log.push(`${op} ${key}`);
+      let res = `${id}\nERR\n`;
+      if (op === 'P') res = `${id}\nOK\ntest-module`;
+      if (op === 'R') res = files.get(key) ? `${id}\nOK\n${files.get(key)}` : `${id}\nMISSING\n`;
+      if (op === 'W') {
+        files.set(key, value);
+        res = `${id}\nOK\n`;
+      }
+      setTimeout(() => handler(res), 0);
+    },
+  };
+  return { bus, files, log };
+}
+
+const settle = () => new Promise((r) => setTimeout(r, 20));
+
+test('file bridge: requests run one at a time and a queued write is replaced by a newer one', async () => {
+  const m = fakeModule();
+  const b = new FileBridge(m.bus);
+  const done = Promise.all([b.write('a', '1'), b.write('b', '1'), b.write('b', '2'), b.write('b', 'multi\nline'), b.read('b'), b.read('nope')]);
+  assert.equal(b.pending, 4, 'three writes to b collapse into one');
+  const r = await done;
+  assert.deepEqual(r.slice(0, 4), [true, true, true, true]);
+  assert.deepEqual(r[4], { status: 'OK', value: 'multi\nline' });
+  assert.deepEqual(r[5], { status: 'MISSING' });
+  assert.deepEqual(m.log, ['W a', 'W b', 'R b', 'R nope']);
+  // No answer: the request fails after the timeout and the queue moves on.
+  const dead = new FileBridge(fakeModule(new Map(), { dead: true }).bus, 10);
+  assert.equal(await dead.ping(), null);
+  assert.equal(await dead.write('a', '1'), false);
+  assert.equal(dead.failures, 2);
+});
+
+test('file storage: first run copies the log out, later writes are mirrored', async () => {
+  const inner = new MemoryStore();
+  const recs = await run();
+  new LandingLog(inner).add(recs[0]);
+  const m = fakeModule();
+  const store = new MirroredStore(inner, new FileBridge(m.bus));
+  assert.equal(await store.start(1, 0), false, 'nothing came in from the files');
+  assert.equal(store.startResult, 'first copy');
+  assert.equal(store.state, 'active');
+  const id = recs[0].summary.id;
+  assert.deepEqual(Array.from(m.files.keys()).sort(), ['index.0', 'index.pages', 'rev', `trace.${id}`, 'unread'].sort());
+  assert.equal(m.files.get('index.0'), inner.get(LandingLog.PREFIX + 'index.0'));
+
+  // A setting changed afterwards reaches the file, and the revision moves on both sides.
+  const rev = m.files.get('rev');
+  store.set(LandingLog.PREFIX + 'settings', '{"dist":"m"}');
+  store.set('SOMEONE.ELSE', 'x');
+  await settle();
+  assert.equal(m.files.get('settings'), '{"dist":"m"}');
+  assert.ok(!m.files.has('SOMEONE.ELSE') && !Array.from(m.files.keys()).some((k) => k.includes('SOMEONE')));
+  assert.notEqual(m.files.get('rev'), rev);
+  assert.equal(m.files.get('rev'), inner.get(LandingLog.PREFIX + 'rev'));
+
+  // Next start: both sides agree, nothing is read or written beyond the revision.
+  const again = new MirroredStore(inner, new FileBridge(m.bus));
+  m.log.length = 0;
+  assert.equal(await again.start(1, 0), false);
+  assert.equal(again.startResult, 'in step');
+  assert.deepEqual(m.log, ['P ', 'R rev']);
+});
+
+test('file storage: a wiped DataStore is rebuilt from the files, and a backup merges in', async () => {
+  // Session 1: two landings, mirrored.
+  const inner = new MemoryStore();
+  const m = fakeModule();
+  const s1 = new MirroredStore(inner, new FileBridge(m.bus));
+  await s1.start(1, 0);
+  const log1 = new LandingLog(s1);
+  const [a] = await run();
+  const [b] = await run({ touchdownSink: 300 });
+  a.summary.recordedAt = 1000;
+  b.summary.recordedAt = 2000;
+  log1.add(a);
+  log1.add(b);
+  s1.set(LandingLog.PREFIX + 'settings', '{"dist":"m"}');
+  await settle();
+  const backup = new Map(m.files);
+
+  // The sim loses its save data: the files bring everything back.
+  const wiped = new MemoryStore();
+  const s2 = new MirroredStore(wiped, new FileBridge(m.bus));
+  assert.equal(await s2.start(1, 0), true);
+  assert.equal(s2.startResult, 'merged');
+  const log2 = new LandingLog(s2);
+  assert.deepEqual(log2.list().map((s) => s.id), [b.summary.id, a.summary.id]);
+  assert.ok(log2.getTrace(a.summary.id) && log2.getTrace(b.summary.id));
+  assert.equal(wiped.get(LandingLog.PREFIX + 'settings'), '{"dist":"m"}');
+  assert.equal(log2.unreadList().length, 2);
+
+  // A third landing is flown, then the older backup is copied back over the folder:
+  // the new landing is kept and written out again.
+  const [c] = await run({ touchdownSink: 200 });
+  c.summary.recordedAt = 3000;
+  log2.add(c);
+  await settle();
+  const restored = fakeModule(new Map(backup));
+  const s3 = new MirroredStore(wiped, new FileBridge(restored.bus));
+  await s3.start(1, 0);
+  assert.equal(s3.startResult, 'merged');
+  assert.equal(new LandingLog(s3).list().length, 3);
+  assert.equal(JSON.parse(restored.files.get('index.0')!).length, 3);
+  assert.ok(restored.files.get(`trace.${c.summary.id}`));
+  assert.equal(restored.files.get('rev'), wiped.get(LandingLog.PREFIX + 'rev'));
+});
+
+test('file storage: without the module the app runs on the DataStore alone', async () => {
+  const inner = new MemoryStore();
+  const none = new MirroredStore(inner, null);
+  assert.equal(none.state, 'unavailable');
+  none.set(LandingLog.PREFIX + 'settings', '{}');
+  assert.equal(inner.get(LandingLog.PREFIX + 'settings'), '{}');
+  const silent = new MirroredStore(inner, new FileBridge(fakeModule(new Map(), { dead: true }).bus, 5));
+  silent.set(LandingLog.PREFIX + 'unread', '[]');
+  assert.equal(await silent.start(2, 1), false);
+  assert.equal(silent.state, 'unavailable');
+  assert.equal(inner.get(LandingLog.PREFIX + 'unread'), '[]');
+});
+
+test('file storage: writes made while the files are being checked are sent afterwards', async () => {
+  const inner = new MemoryStore();
+  const m = fakeModule();
+  const store = new MirroredStore(inner, new FileBridge(m.bus));
+  const starting = store.start(1, 0);
+  store.set(LandingLog.PREFIX + 'settings', '{"vs":"mps"}');
+  await starting;
+  await settle();
+  assert.equal(m.files.get('settings'), '{"vs":"mps"}');
 });

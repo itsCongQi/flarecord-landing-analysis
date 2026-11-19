@@ -152,11 +152,22 @@ export class LandingLog {
     return () => this.listeners.delete(fn);
   }
 
+  /** Read the log again after the store was changed from outside (files loaded at start). */
+  reload(): void {
+    this.index = this.readIndex();
+    this.unread = this.readUnread();
+    this.listeners.forEach((fn) => fn());
+  }
+
   private readIndex(): LandingSummary[] {
-    const pages = Number(this.store.get(LandingLog.PREFIX + 'index.pages') ?? 0) || 0;
+    return LandingLog.readIndexFrom(this.store);
+  }
+
+  static readIndexFrom(store: KeyValueStore): LandingSummary[] {
+    const pages = Number(store.get(LandingLog.PREFIX + 'index.pages') ?? 0) || 0;
     const out: LandingSummary[] = [];
     for (let p = 0; p < pages; p++) {
-      const raw = this.store.get(LandingLog.PREFIX + 'index.' + p);
+      const raw = store.get(LandingLog.PREFIX + 'index.' + p);
       if (!raw) continue;
       try {
         const parsed = JSON.parse(raw);
@@ -225,15 +236,36 @@ export class LandingLog {
   }
 
   private writeIndex(): void {
-    const oldPages = Number(this.store.get(LandingLog.PREFIX + 'index.pages') ?? 0) || 0;
-    const pages = Math.ceil(this.index.length / LandingLog.PAGE_SIZE);
-    for (let p = 0; p < pages; p++) {
-      const page = this.index.slice(p * LandingLog.PAGE_SIZE, (p + 1) * LandingLog.PAGE_SIZE);
-      this.store.set(LandingLog.PREFIX + 'index.' + p, JSON.stringify(page));
-    }
-    for (let p = pages; p < oldPages; p++) this.store.remove(LandingLog.PREFIX + 'index.' + p);
-    this.store.set(LandingLog.PREFIX + 'index.pages', String(pages));
+    LandingLog.writeIndexTo(this.store, this.index);
     this.listeners.forEach((fn) => fn());
+  }
+
+  static writeIndexTo(store: KeyValueStore, index: readonly LandingSummary[]): void {
+    const oldPages = Number(store.get(LandingLog.PREFIX + 'index.pages') ?? 0) || 0;
+    const pages = Math.ceil(index.length / LandingLog.PAGE_SIZE);
+    for (let p = 0; p < pages; p++) {
+      const page = index.slice(p * LandingLog.PAGE_SIZE, (p + 1) * LandingLog.PAGE_SIZE);
+      store.set(LandingLog.PREFIX + 'index.' + p, JSON.stringify(page));
+    }
+    for (let p = pages; p < oldPages; p++) store.remove(LandingLog.PREFIX + 'index.' + p);
+    store.set(LandingLog.PREFIX + 'index.pages', String(pages));
+  }
+
+  /** Keys outside the index and the traces that belong to the app's saved state. */
+  static readonly EXTRA_KEYS = ['settings', 'unread', 'pref.summaryAircraft'];
+
+  /**
+   * Every key the app has in a store, without the prefix. The store cannot list its keys, so
+   * the known ones are walked: the index pages, the traces of the landings in them and the extras.
+   */
+  static keysIn(store: KeyValueStore): string[] {
+    const keys: string[] = [];
+    if (store.get(LandingLog.PREFIX + 'index.pages') !== null) keys.push('index.pages');
+    const pages = Number(store.get(LandingLog.PREFIX + 'index.pages') ?? 0) || 0;
+    for (let p = 0; p < pages; p++) if (store.get(LandingLog.PREFIX + 'index.' + p) !== null) keys.push('index.' + p);
+    for (const s of LandingLog.readIndexFrom(store)) if (store.get(LandingLog.PREFIX + 'trace.' + s.id) !== null) keys.push('trace.' + s.id);
+    for (const k of LandingLog.EXTRA_KEYS) if (store.get(LandingLog.PREFIX + k) !== null) keys.push(k);
+    return keys;
   }
 }
 
