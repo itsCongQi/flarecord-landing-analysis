@@ -5,12 +5,15 @@
  * The runway outline, length and width come from the sim's runway data. The painted markings are
  * not exposed by the sim, so they are drawn at their standard positions (see runwayMarkings).
  */
+import { thresholdCrossing } from '../../core/gates.ts';
 import type { LandingSummary, LandingTrace } from '../../core/types.ts';
 import { group, runwayMarkings, type RunwayMarkings, type Units } from '../../core/units.ts';
 
 const PAINT = '#c9d1d9';
 const ACCENT = '#5ab0ff';
 const FLARE = '#e3b341';
+/** Threshold crossing: the same colour as its marker on the Landing page's chart. */
+export const THRESHOLD = '#c297ff';
 const SURFACE = '#1a2027';
 
 /** viewBox width, and the x position of the landing threshold inside it. */
@@ -162,10 +165,19 @@ export function runwayView(s: LandingSummary, tr: LandingTrace | null, u: Units,
   const side = (m: number) => (Math.abs(u.dist(m)) < 0.5 ? '' : m >= 0 ? ' R' : ' L');
   const tdText = `TOUCHDOWN ${group(u.dist(g.distFromThresholdM))} ${u.distUnit} · ${group(Math.abs(u.dist(g.centerlineOffsetM)))} ${u.distUnit}${side(g.centerlineOffsetM)}`;
 
-  // Call-outs sit on two rows so the flare and touchdown labels never collide.
+  // Height over the threshold, at the left of the lower call-out row, above the threshold line.
+  const thr = tr ? thresholdCrossing(tr) : null;
+  const THR_LABEL_END = 190;
+  if (thr) {
+    p.push(`<line x1="${THR_X}" y1="50" x2="${THR_X}" y2="${y0}" stroke="${THRESHOLD}" stroke-width="1.5"/>`);
+    p.push(`<text x="2" y="46" class="la-rw-call" fill="${THRESHOLD}">THRESHOLD ${u.fmtHeight(thr.agl)} ${u.heightUnit} RA</text>`);
+  }
+
+  // Call-outs sit on two rows so the flare and touchdown labels never collide; a flare that
+  // starts near the threshold has its label moved clear of the threshold one.
   if (flareX !== null && s.flare.flareHeightFt !== null) {
     p.push(`<line x1="${n(flareX)}" y1="52" x2="${n(flareX)}" y2="188" stroke="${FLARE}" stroke-width="1.5" stroke-dasharray="4 3"/>`);
-    p.push(`<text x="${n(labelX(flareX, 70))}" y="46" class="la-rw-call" fill="${FLARE}" text-anchor="middle">FLARE ${u.fmtHeight(s.flare.flareHeightFt)} ${u.heightUnit}</text>`);
+    p.push(`<text x="${n(Math.max(thr ? THR_LABEL_END + 70 : 0, labelX(flareX, 70)))}" y="46" class="la-rw-call" fill="${FLARE}" text-anchor="middle">FLARE ${u.fmtHeight(s.flare.flareHeightFt)} ${u.heightUnit}</text>`);
   }
   p.push(`<line x1="${n(tdX)}" y1="30" x2="${n(tdX)}" y2="${n(tdY - 6.5)}" stroke="${ACCENT}" stroke-width="1.5"/>`);
   p.push(`<circle cx="${n(tdX)}" cy="${n(tdY)}" r="6.5" fill="#0b0d10" stroke="${ACCENT}" stroke-width="2.5"/>`);

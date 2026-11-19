@@ -1,14 +1,17 @@
-import { heightGates, traceAt, type Gate, type TracePoint } from '../../core/gates';
+import { heightGates, thresholdCrossing, traceAt, type Gate, type TracePoint } from '../../core/gates';
 import type { LandingSummary, LandingTrace } from '../../core/types';
 import type { Units } from '../../core/units';
 import { chartSvg, stackSvg, stackTimeAt, type ChartMarker } from '../components/chartSvg';
-import { rolloutView, runwayView } from '../components/runwaySvg';
-import { esc, fmtWhen, sided } from '../format';
+import { rolloutView, runwayView, THRESHOLD } from '../components/runwaySvg';
+import { esc, fmtAgo, fmtWhen, sided } from '../format';
 import { EXAMPLE_NOTE, PageBase, titleHtml } from './PageBase';
 
 const LINE = '#5ab0ff';
 const FLARE = '#e3b341';
 const TD = '#e8ecf0';
+
+/** A row of the values-by-height table: a height gate, the threshold crossing or the touchdown. */
+type Row = Gate & { threshold?: boolean };
 
 const signed = (v: number, digits: number) => `${v > 0 ? '+' : ''}${v.toFixed(digits)}`;
 
@@ -35,6 +38,23 @@ export class LandingPage extends PageBase {
   private cursorT: number | null = null;
   private shownId = '';
 
+  // Opening this page is what makes a landing "read". Redraws while the page is hidden (a landing
+  // recorded with the tablet closed selects itself here) do not count.
+  public onOpen(): void {
+    this.markRead();
+    super.onOpen();
+  }
+
+  public onResume(): void {
+    this.markRead();
+    super.onResume();
+  }
+
+  private markRead(): void {
+    const s = this.props.svc.selected.get();
+    if (s) this.props.svc.log.markRead(s.id);
+  }
+
   protected draw(el: HTMLDivElement): void {
     const svc = this.props.svc;
     const s = svc.selected.get();
@@ -56,7 +76,7 @@ export class LandingPage extends PageBase {
     const g = s.geometry;
     const tr = svc.log.getTrace(s.id);
 
-    const sub = [esc(s.aircraft), fmtWhen(s.recordedAt, true)];
+    const sub = [esc(s.aircraft), `${fmtWhen(s.recordedAt, true)} (${fmtAgo(s.recordedAt)})`];
     if (s.windKt !== undefined && s.windDirDeg !== undefined) sub.push(s.windKt < 1 ? 'Wind calm' : `Wind ${('00' + (s.windDirDeg === 0 ? 360 : s.windDirDeg)).slice(-3)}° / ${u.fmtSpeed(s.windKt)} ${u.speedUnit}`);
     if (s.touchAndGo) sub.push('Touch-and-go');
     if (i >= 0) sub.push(`${list.length - i} of ${list.length}`);
@@ -70,6 +90,7 @@ export class LandingPage extends PageBase {
             <span class="la-key"><i class="la-key-dash"></i>Approach track</span>
             <span class="la-key"><i class="la-key-line"></i>Rollout track</span>
             <span class="la-key"><i class="la-key-flare"></i>Flare start</span>
+            ${tr && thresholdCrossing(tr) ? '<span class="la-key"><i class="la-key-thr la-key-thr-solid"></i>Over the threshold</span>' : ''}
             <span class="la-legend-note">${view.note}</span>
           </div>
         </div>`
@@ -88,6 +109,13 @@ export class LandingPage extends PageBase {
       tdRow.vs = s.touchdownVsFpm;
       tdRow.pitch = s.pitchDeg;
       tdRow.ias = s.touchdownIasKt;
+      // The threshold crossing goes into the table in time order, between the heights around it.
+      const thr = thresholdCrossing(tr);
+      const rows: Row[] = gates.slice();
+      if (thr) {
+        const at = rows.findIndex((r) => r.t > thr.t);
+        rows.splice(at < 0 ? rows.length - 1 : at, 0, { ...thr, height: null, threshold: true });
+      }
 
       const from = tr.t.findIndex((x) => x >= -this.windowS);
       const to = tr.t.findIndex((x) => x > 3);
@@ -97,20 +125,21 @@ export class LandingPage extends PageBase {
       detail = `
       <div class="la-panel la-table la-gates">
         <div class="la-set-head la-panel-head"><span class="la-label">VALUES BY HEIGHT</span><span class="la-note">Last descent through each height. Tap a row to place the cursor on the graph.</span></div>
-        ${this.gateTable(gates, cursor, u, g !== null)}
+        ${this.gateTable(rows, cursor, u, g !== null)}
       </div>
       <div class="la-panel la-chart-box">
         <div class="la-panel-head">
           <span class="la-label">APPROACH AND FLARE · seconds to touchdown</span>
           <span class="la-head-actions">
             <span class="la-key"><i class="la-key-gate"></i>Height</span>
+            ${thr ? '<span class="la-key"><i class="la-key-thr"></i>Threshold</span>' : ''}
             <span class="la-key"><i class="la-key-flare"></i>Flare start</span>
             <span class="la-key"><i class="la-key-td"></i>Touchdown</span>
             <div class="la-seg">${[30, 15, 8].map((w) => `<button class="la-seg-btn la-seg-small${w === this.windowS ? ' on' : ''}" data-w="${w}">${w} s</button>`).join('')}</div>
           </span>
         </div>
         <div class="la-readout">${cursor !== null ? this.readout(traceAt(tr, cursor), u) : '<span class="la-note">Tap the graph to read every value at that moment.</span>'}</div>
-        <div class="la-stack-hit">${this.stack(s, tr, t, cut, gates, cursor, u)}</div>
+        <div class="la-stack-hit">${this.stack(s, tr, t, cut, gates, thr, cursor, u)}</div>
       </div>
       ${this.rollout(s, tr, u)}`;
     }
@@ -134,8 +163,13 @@ export class LandingPage extends PageBase {
       ${detail}`;
     el.scrollTop = scroll;
 
-    this.on(el, '[data-act="older"]', () => older && svc.selected.set(older));
-    this.on(el, '[data-act="newer"]', () => newer && svc.selected.set(newer));
+    const show = (x: LandingSummary | null) => {
+      if (!x) return;
+      svc.selected.set(x);
+      svc.log.markRead(x.id);
+    };
+    this.on(el, '[data-act="older"]', () => show(older));
+    this.on(el, '[data-act="newer"]', () => show(newer));
     // Two taps to delete (no confirm dialogs in the EFB): the first arms, the second deletes.
     let armed = false;
     this.on(el, '[data-act="delete"]', (b) => {
@@ -193,8 +227,9 @@ export class LandingPage extends PageBase {
     ].join('');
   }
 
-  private stack(s: LandingSummary, tr: LandingTrace, t: number[], cut: <T>(xs: T[]) => T[], gates: Gate[], cursor: number | null, u: Units): string {
+  private stack(s: LandingSummary, tr: LandingTrace, t: number[], cut: <T>(xs: T[]) => T[], gates: Gate[], thr: TracePoint | null, cursor: number | null, u: Units): string {
     const markers: ChartMarker[] = [{ t: 0, label: '', color: TD }];
+    if (thr) markers.push({ t: thr.t, label: `THRESHOLD ${u.fmtHeight(thr.agl)} ${u.heightUnit}`, color: THRESHOLD });
     if (s.flare.flareDurationS !== null) markers.push({ t: -s.flare.flareDurationS, label: '', color: FLARE });
     return stackSvg({
       t,
@@ -225,7 +260,7 @@ export class LandingPage extends PageBase {
     ].join('');
   }
 
-  private gateTable(gates: Gate[], cursor: number | null, u: Units, hasRunway: boolean): string {
+  private gateTable(gates: Row[], cursor: number | null, u: Units, hasRunway: boolean): string {
     const col = (cls: string, text: string) => `<span class="la-col ${cls}">${text}</span>`;
     const head =
       `<div class="la-row la-row-head">` +
@@ -241,9 +276,9 @@ export class LandingPage extends PageBase {
       const cl = g.centerline !== null ? sided(u.dist(g.centerline), 0) : null;
       const on = cursor !== null && Math.abs(cursor - g.t) < 0.06;
       return (
-        `<div class="la-row${on ? ' on' : ''}" data-t="${g.t.toFixed(2)}">` +
-        col('la-gcol-h', g.height !== null ? String(g.height) : 'Touchdown') +
-        col('la-gcol', g.height !== null ? g.t.toFixed(1) : '0.0') +
+        `<div class="la-row${on ? ' on' : ''}${g.threshold ? ' la-row-thr' : ''}" data-t="${g.t.toFixed(2)}">` +
+        col('la-gcol-h', g.threshold ? `Threshold · ${u.fmtHeight(g.agl)}` : g.height !== null ? String(g.height) : 'Touchdown') +
+        col('la-gcol', g.height !== null || g.threshold ? g.t.toFixed(1) : '0.0') +
         col('la-gcol', u.fmtVs(g.vs)) +
         col('la-gcol', signed(g.pitch, 1)) +
         col('la-gcol', u.fmtSpeed(g.ias)) +

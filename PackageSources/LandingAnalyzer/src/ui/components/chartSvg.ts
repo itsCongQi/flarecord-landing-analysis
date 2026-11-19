@@ -146,8 +146,8 @@ export interface StackOptions {
 const STACK = { width: 1080, padL: 44, padR: 86, padT: 40, lane: 92, gap: 28, padB: 24 };
 
 /** Height of the stacked chart's viewBox for a number of lanes. */
-function stackHeight(lanes: number): number {
-  return STACK.padT + lanes * STACK.lane + (lanes - 1) * STACK.gap + STACK.padB;
+function stackHeight(lanes: number, extraTop = 0): number {
+  return STACK.padT + extraTop + lanes * STACK.lane + (lanes - 1) * STACK.gap + STACK.padB;
 }
 
 /**
@@ -166,9 +166,12 @@ export function stackTimeAt(t: number[], fraction: number): number {
  * every lane; the cursor prints each lane's value in the right margin.
  */
 export function stackSvg(o: StackOptions): string {
-  const { width, padL, padR, padT, lane, gap, padB } = STACK;
+  const { width, padL, padR, lane, gap, padB } = STACK;
+  // Markers with a label get a row of their own above the gate labels.
+  const extraTop = (o.markers ?? []).some((m) => m.label) ? 14 : 0;
+  const padT = STACK.padT + extraTop;
   const w = width - padL - padR;
-  const height = stackHeight(o.lanes.length);
+  const height = stackHeight(o.lanes.length, extraTop);
   const bottom = height - padB;
   const t0 = o.t[0];
   const t1 = o.t[o.t.length - 1];
@@ -247,7 +250,8 @@ export function stackSvg(o: StackOptions): string {
   for (const m of o.markers ?? []) {
     if (m.t < t0 || m.t > t1) continue;
     const xx = x(m.t).toFixed(1);
-    p.push(`<line x1="${xx}" x2="${xx}" y1="${padT}" y2="${bottom}" stroke="${m.color}" stroke-width="1.5" stroke-dasharray="4 3"/>`);
+    p.push(`<line x1="${xx}" x2="${xx}" y1="${m.label ? padT - 34 : padT}" y2="${bottom}" stroke="${m.color}" stroke-width="1.5" stroke-dasharray="4 3"/>`);
+    if (m.label) p.push(`<text x="${xx}" y="${padT - 40}" class="la-marker-label" fill="${m.color}" text-anchor="middle">${m.label}</text>`);
   }
   if (cursor !== null) {
     const xx = x(cursor).toFixed(1);
