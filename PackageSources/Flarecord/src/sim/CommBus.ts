@@ -28,9 +28,19 @@ export function simCommBus(): BusLike | null {
   if (!listener) return null;
   return {
     send: (event, data) => {
-      if (ready) call(event, data);
-      else waiting.push([event, data]);
+      try {
+        if (ready) call(event, data);
+        else waiting.push([event, data]);
+      } catch (e) {
+        // The request times out in the bridge.
+      }
     },
-    on: (event, fn) => listener.on(event, fn),
+    on: (event, fn) => {
+      try {
+        listener.on(event, fn);
+      } catch (e) {
+        console.error('Flarecord: Comm Bus listener could not subscribe', e);
+      }
+    },
   };
 }
