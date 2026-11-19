@@ -40,7 +40,9 @@ export function chartSvg(o: ChartOptions): string {
   const t0 = o.t[0];
   const t1 = o.t[o.t.length - 1];
 
-  const all = o.series.flatMap((s) => s.values.filter((v): v is number => v !== null));
+  // No Array.flatMap: the EFB build targets ES2017 (Coherent GT).
+  const all: number[] = [];
+  for (const s of o.series) for (const v of s.values) if (v !== null) all.push(v);
   for (const g of o.guides ?? []) all.push(g.value);
   let lo = o.yMin ?? Math.min(...all);
   let hi = o.yMax ?? Math.max(...all);
