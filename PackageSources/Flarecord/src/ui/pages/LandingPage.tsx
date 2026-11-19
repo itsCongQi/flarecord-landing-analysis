@@ -161,7 +161,7 @@ export class LandingPage extends PageBase {
         </div>
       </div>
       ${runwayPanel}
-      <div class="la-panel la-cells la-cells-7">${this.cells(s, u)}</div>
+      <div class="la-panel la-cells la-cells-5">${this.cells(s, u)}</div>
       ${detail}`;
     el.scrollTop = scroll;
 
@@ -205,19 +205,20 @@ export class LandingPage extends PageBase {
   }
 
   private cells(s: LandingSummary, u: Units): string {
-    const cell = (label: string, value: string, unit = '', help = '', sub = '') =>
-      `<div class="la-cell">${help ? helpBtn(help, true) : ''}<div class="la-label">${label}</div><div class="la-value">${value}${unit ? ` <span>${unit}</span>` : ''}</div>${sub ? `<div class="la-cell-sub">${sub}</div>` : ''}</div>`;
-    // The half-second average sits under the contact value; when the sim gave no contact value
-    // the average is the main figure and says so.
-    const avg = s.avgVsFpm !== undefined && s.avgVsFpm !== null ? `${u.fmtVs(s.avgVsFpm)} ${u.vsUnit}` : '';
-    const vsSub = s.vsSource === 'fit' ? '0.5 s average' : s.vsSource === 'sample' ? 'last reading before contact' : avg ? `0.5 s avg ${avg}` : '';
+    const cell = (label: string, value: string, unit = '', help = '') =>
+      `<div class="la-cell"><div class="la-label">${label}${help ? helpBtn(help) : ''}</div><div class="la-value">${value}${unit ? ` <span>${unit}</span>` : ''}</div></div>`;
+    // The half-second average has its own tile. When the sim gave no contact value the main
+    // figure is that average (or the last reading), and its unit says so.
+    const hasAvg = s.avgVsFpm !== undefined && s.avgVsFpm !== null;
+    const vsUnit = s.vsSource === 'fit' ? `${u.vsUnit} · 0.5 s avg` : s.vsSource === 'sample' ? `${u.vsUnit} · last reading` : u.vsUnit;
     const bank = sided(s.bankDeg, 1);
     const crab = sided(s.crabDeg, 1);
     const xw = sided(u.speed(s.crosswindKt), 0);
     const f = s.flare;
     const hw = Math.round(u.speed(s.headwindKt));
     return [
-      cell('VERTICAL SPEED', u.fmtVs(s.touchdownVsFpm), u.vsUnit, 'vs', vsSub),
+      cell('VERTICAL SPEED', u.fmtVs(s.touchdownVsFpm), vsUnit, 'vs'),
+      cell('V/S 0.5 S AVG', hasAvg ? u.fmtVs(s.avgVsFpm as number) : 'n/a', hasAvg ? u.vsUnit : '', 'vs'),
       cell('PEAK LOAD', s.peakG.toFixed(2), 'g', 'g'),
       cell('IAS / GS', `${u.fmtSpeed(s.touchdownIasKt)} / ${u.fmtSpeed(s.touchdownGsKt)}`, u.speedUnit),
       cell('PITCH', `${s.pitchDeg > 0 ? '+' : ''}${s.pitchDeg.toFixed(1)}°`),
@@ -225,12 +226,12 @@ export class LandingPage extends PageBase {
       cell('CRAB', `${crab.value}°`, crab.side, 'crab'),
       cell(hw < 0 ? 'TAILWIND' : 'HEADWIND', String(Math.abs(hw)), u.speedUnit, 'wind'),
       cell('CROSSWIND', xw.value, xw.side ? `${u.speedUnit} from ${xw.side}` : u.speedUnit, 'wind'),
+      cell('BOUNCES', String(s.bounces), '', 'bounces'),
       f.vsAtFlareFpm !== null ? cell('V/S AT FLARE', u.fmtVs(f.vsAtFlareFpm), u.vsUnit, 'flare') : cell('V/S AT FLARE', 'n/a', '', 'flare'),
       f.pitchChangeDeg !== null ? cell('PITCH CHANGE', `${signed(f.pitchChangeDeg, 1)}°`, f.approachPitchDeg !== null ? `from ${f.approachPitchDeg.toFixed(1)}°` : '', 'pitchChange') : cell('PITCH CHANGE', 'n/a', '', 'pitchChange'),
       cell('FLARE HEIGHT', f.flareHeightFt !== null ? u.fmtHeight(f.flareHeightFt) : 'n/a', f.flareHeightFt !== null ? u.heightUnit : '', 'flare'),
       cell('FLARE DURATION', f.flareDurationS !== null ? f.flareDurationS.toFixed(1) : 'n/a', f.flareDurationS !== null ? 's' : '', 'flare'),
       cell(`FLOAT BELOW ${u.s.height === 'ft' ? '5 FT' : '1.5 M'}`, f.floatTimeS.toFixed(1), 's', 'float'),
-      cell('BOUNCES', String(s.bounces), '', 'bounces'),
     ].join('');
   }
 

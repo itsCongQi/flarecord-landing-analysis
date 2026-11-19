@@ -89,14 +89,11 @@ $thr: #c297ff;
 // Value cells: a panel divided by hairlines, six per row (five or four with a modifier).
 .la-cells { display: flex; flex-direction: row; flex-wrap: wrap; overflow: hidden; }
 .la-cell { width: 16.666%; box-sizing: border-box; padding: 14px 18px; border-right: 1px solid $line; border-bottom: 1px solid $line; margin-bottom: -1px; }
-.la-cell { position: relative; }
 .la-cell .la-label { white-space: nowrap; overflow: hidden; }
-.la-cell-sub { margin-top: 3px; font-size: 13px; color: $muted; white-space: nowrap; }
 
 // "?" buttons and the explanation box they open.
 .la-page { position: relative; }
-.la-help { display: inline-block; width: 20px; height: 20px; box-sizing: border-box; margin-left: 10px; border: 1px solid $line2; border-radius: 10px; color: $muted; font-size: 12px; font-weight: 600; line-height: 18px; letter-spacing: 0; text-align: center; vertical-align: middle; &:hover { color: $text; border-color: $muted; } }
-.la-help-corner { position: absolute; bottom: 12px; right: 10px; margin-left: 0; }
+.la-help { display: inline-block; width: 15px; height: 15px; box-sizing: border-box; margin-left: 7px; border: 1px solid $line2; border-radius: 8px; color: $muted; font-size: 10px; font-weight: 600; line-height: 13px; letter-spacing: 0; text-align: center; vertical-align: 1px; &:hover { color: $text; border-color: $muted; } }
 .la-tip { position: absolute; z-index: 5; box-sizing: border-box; padding: 14px 16px; background-color: $raised; border: 1px solid $line2; border-radius: 6px; }
 .la-tip-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
 .la-tip-text { font-size: 14px; line-height: 20px; color: #b6bec8; }

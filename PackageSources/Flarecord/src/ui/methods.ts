@@ -17,7 +17,7 @@ export const METHODS: Method[] = [
   {
     key: 'vs',
     title: 'Vertical speed at touchdown',
-    text: 'The main figure is the simulator\'s own touchdown velocity (PLANE TOUCHDOWN NORMAL VELOCITY), read at first wheel contact. It is the speed at right angles to the ground at that instant, so runway slope is included. The "0.5 s avg" figure is separate: the slope of a straight line fitted to gear height over the last half second before contact. A gap between the two means the sink rate was still changing as the wheels touched. If the simulator gives no touchdown value, the 0.5 s average becomes the main figure and is labelled as such.',
+    text: 'The main figure is the simulator\'s own touchdown velocity (PLANE TOUCHDOWN NORMAL VELOCITY), read at first wheel contact. It is the speed at right angles to the ground at that instant, so runway slope is included. The 0.5 s average is a separate measurement: the slope of a straight line fitted to gear height over the last half second before contact. A gap between the two means the sink rate was still changing as the wheels touched. If the simulator gives no touchdown value, the 0.5 s average becomes the main figure and is labelled as such.',
   },
   {
     key: 'g',
@@ -78,7 +78,7 @@ export function method(key: string): Method | null {
   return BY_KEY[key] ?? null;
 }
 
-/** The "?" button for a figure. `corner` pins it to the top right of a value cell. */
-export function helpBtn(key: string, corner = false): string {
-  return `<span class="la-help${corner ? ' la-help-corner' : ''}" data-help="${key}">?</span>`;
+/** The small "?" button that follows a figure's title. */
+export function helpBtn(key: string): string {
+  return `<span class="la-help" data-help="${key}">?</span>`;
 }
