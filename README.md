@@ -29,15 +29,14 @@ the sim; see "Next steps" for what still needs checking in flight.
 
 ### Screens
 
-- **Touchdown**: a top-down runway view with the touchdown point, the approach and rollout ground
-  track and the flare start, then the values measured at contact. Previous and Next step through
-  the log.
-- **Analysis**: a table of values at set heights (200, 100, 50, 30, 20 and 10 ft, then
+- **Landing**: everything about the selected landing on one scrolling page. A top-down runway view
+  with the touchdown point, the approach and rollout ground track and the flare start; the values
+  measured at contact; a table of values at set heights (200, 100, 50, 30, 20 and 10 ft, then
   touchdown: time, vertical speed, pitch, airspeed, elevator input, centreline offset and distance
-  from the threshold), and one combined chart with radio altitude, vertical speed, pitch, airspeed
-  and elevator input stacked on a shared time axis, zoomable to 30 s / 15 s / 8 s. The heights,
-  flare start and touchdown are marked on it. Tapping the chart or a table row places a cursor and
-  reads every value at that moment. Below it, the rollout's distance from the centreline.
+  from the threshold); and one combined chart with radio altitude, vertical speed, pitch, airspeed
+  and elevator input stacked on a shared time axis, zoomable to 30 s / 15 s / 8 s. Tapping the
+  chart or a height row places a cursor and reads every value at that moment. Previous and Next
+  step through the log.
 - **Log**: every landing as a table, medians, and the touchdown points of recent landings overlaid
   on one runway outline. A row opens that landing.
 - **Settings**: units for runway distance (ft or m), height (ft or m), vertical speed (fpm or m/s)
@@ -125,7 +124,7 @@ PackageSources/LandingAnalyzer/
     geo.ts             runway geometry, wind components, runway matching
   src/storage/         LandingLog (paged DataStore log), DataStoreAdapter
   src/sim/             SimVarSampler (20 Hz SimVar reads), RunwayProvider (FacilityLoader)
-  src/ui/              pages: Touchdown, Analysis, Log, Settings; chartSvg and runwaySvg
+  src/ui/              pages: Landing, Log, Settings; chartSvg and runwaySvg
                        (dependency-free SVG drawings)
   src/AnalyzerService.ts   always-on capture, started from App.install()
   src/LandingAnalyzer.tsx  EFB App + AppView registration

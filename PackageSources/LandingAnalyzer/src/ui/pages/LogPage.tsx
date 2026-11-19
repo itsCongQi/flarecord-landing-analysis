@@ -69,7 +69,7 @@ export class LogPage extends PageBase {
     this.on(el, '.la-row[data-id]', (r) => {
       const s = log.list().find((x) => x.id === r.getAttribute('data-id')) ?? null;
       this.props.svc.selected.set(s);
-      this.props.go('Touchdown');
+      this.props.go('Landing');
     });
   }
 }

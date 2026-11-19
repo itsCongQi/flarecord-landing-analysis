@@ -73,6 +73,7 @@ $ok: #3fb950;
 .la-cells { display: flex; flex-direction: row; flex-wrap: wrap; overflow: hidden; }
 .la-cell { width: 16.666%; box-sizing: border-box; padding: 14px 18px; border-right: 1px solid $line; border-bottom: 1px solid $line; margin-bottom: -1px; }
 .la-cell .la-label { white-space: nowrap; overflow: hidden; }
+.la-cells-7 .la-cell { width: 14.285%; padding: 14px 14px; }
 .la-cells-5 .la-cell { width: 20%; }
 .la-cells-4 .la-cell { width: 25%; }
 .la-value { margin-top: 5px; font-size: 26px; font-weight: 500; white-space: nowrap; span { font-size: 14px; font-weight: 400; color: $muted; } }
