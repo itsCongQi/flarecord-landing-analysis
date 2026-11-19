@@ -44,6 +44,17 @@ export class AnalyzerService {
     return new MirroredStore(new DataStoreAdapter(), null);
   }
 
+  readonly log = this.createLog();
+  /** Latest live sample, for the Live strip at the top of the app. */
+  readonly live = Subject.create<Sample | null>(null);
+  /** The landing shown on the Analysis page. */
+  readonly selected = Subject.create<LandingSummary | null>(this.log.latest());
+  /** Detector phase, for a small status chip ("Armed", "Recording rollout"). */
+  readonly phase = Subject.create<string>('idle');
+
+  /** Display units and options, saved next to the log. */
+  readonly settings = Subject.create<Settings>(parseSettings(this.store.get(SETTINGS_KEY)));
+
   /** Connect to the storage module and bring files and DataStore in step, in the background. */
   private startFiles(): void {
     try {

@@ -22,6 +22,8 @@ function describe(e: unknown): string {
 }
 
 class StartErrorPage extends UiView<UiViewProps> {
+  public readonly tabName = 'Summary';
+
   public render(): VNode {
     return (
       <div class="la-page la-start-error">
