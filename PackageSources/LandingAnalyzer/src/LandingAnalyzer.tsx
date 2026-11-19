@@ -7,6 +7,7 @@ import { FSComponent, Subject, VNode } from '@microsoft/msfs-sdk';
 import { AnalyzerService } from './AnalyzerService';
 import { LandingPage } from './ui/pages/LandingPage';
 import { LogPage } from './ui/pages/LogPage';
+import { SummaryPage } from './ui/pages/SummaryPage';
 import { SettingsPage } from './ui/pages/SettingsPage';
 import { TabBar } from './ui/components/TabBar';
 
@@ -21,6 +22,7 @@ class LandingAnalyzerView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
     const go = (p: string) => this.go(p);
     this.appViewService.registerPage('Landing', () => <LandingPage svc={svc} go={go} />);
     this.appViewService.registerPage('Log', () => <LogPage svc={svc} go={go} />);
+    this.appViewService.registerPage('Summary', () => <SummaryPage svc={svc} go={go} />);
     this.appViewService.registerPage('Settings', () => <SettingsPage svc={svc} go={go} />);
   }
 

@@ -7,6 +7,7 @@ import { LandingLog, MemoryStore } from '../PackageSources/LandingAnalyzer/src/s
 import type { LandingRecord } from '../PackageSources/LandingAnalyzer/src/core/types.ts';
 import { crossingTime, heightGates, traceAt } from '../PackageSources/LandingAnalyzer/src/core/gates.ts';
 import { stackSvg, stackTimeAt } from '../PackageSources/LandingAnalyzer/src/ui/components/chartSvg.ts';
+import { aircraftCounts, summarize } from '../PackageSources/LandingAnalyzer/src/core/summary.ts';
 import { DEFAULT_SETTINGS, Units, group, parseSettings, runwayMarkings } from '../PackageSources/LandingAnalyzer/src/core/units.ts';
 import { dispersionStrip, runwayView } from '../PackageSources/LandingAnalyzer/src/ui/components/runwaySvg.ts';
 import { RUNWAY, simulate, type Scenario } from './simulate.ts';
@@ -193,7 +194,21 @@ test('log medians', async () => {
   log.add(mk('a', -100, 300, -4));
   log.add(mk('b', -300, 500, 1));
   log.add(mk('c', -200, 400, 2));
-  assert.deepEqual(log.stats(), { count: 3, medianVs: -200, medianTdM: 400, medianClM: 2 });
+  const st = log.stats()!;
+  assert.deepEqual({ count: st.count, vs: st.medianVs, td: st.medianTdM, cl: st.medianClM }, { count: 3, vs: -200, td: 400, cl: 2 });
+  assert.equal(st.medianG, a.summary.peakG);
+  assert.equal(st.bounced, 0);
+  // Summary helpers: a subset, and the aircraft list most flown first.
+  const two = summarize(log.list().slice(0, 2))!;
+  assert.deepEqual({ count: two.count, vs: two.medianVs }, { count: 2, vs: -250 });
+  assert.equal(summarize([]), null);
+  assert.equal(summarize([{ ...a.summary, touchAndGo: true }]), null, 'touch-and-goes are left out');
+  const fleet = aircraftCounts([{ ...a.summary, aircraft: 'B' }, { ...a.summary, aircraft: 'A' }, { ...a.summary, aircraft: 'A' }]);
+  assert.deepEqual(fleet, [{ aircraft: 'A', count: 2 }, { aircraft: 'B', count: 1 }]);
+  // The landing by landing graph: whole-number axis and a dot per landing.
+  const svg = stackSvg({ t: [1, 2, 3], sequence: true, cursorT: null, pxWidth: 900, lanes: [{ label: 'VS', values: [-100, null, -300], color: '#fff', format: String }] });
+  assert.equal(svg.split('<circle').length - 1, 2);
+  assert.ok(!svg.includes('>TD<') && svg.includes('>3<'));
 });
 
 test('height gates: values at the last descent through each height', async () => {
