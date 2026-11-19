@@ -47,8 +47,10 @@ export function chartSvg(o: ChartOptions): string {
   let lo = o.yMin ?? Math.min(...all);
   let hi = o.yMax ?? Math.max(...all);
   if (hi - lo < 1e-6) {
-    hi += 1;
-    lo -= 1;
+    // Flat data: widen the range, but never past a fixed bound (e.g. height stays at or above 0).
+    if (o.yMax === undefined) hi += 1;
+    if (o.yMin === undefined) lo -= 1;
+    if (hi - lo < 1e-6) hi = lo + 1;
   }
   if (o.yMin === undefined) lo -= (hi - lo) * 0.08;
   if (o.yMax === undefined) hi += (hi - lo) * 0.08;

@@ -23,10 +23,23 @@ class LandingAnalyzerView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
     this.appViewService.registerPage('History', () => <HistoryPage svc={svc} go={(p) => this.go(p)} />);
   }
 
+  /**
+   * Tab switch. AppViewService keeps a stack: open() hides the current page but leaves it in the
+   * stack, and open() on a page already in the stack throws. So go back down the stack to a page
+   * that is already in it, and only open() pages that are not.
+   */
   private go(page: string): void {
-    // open() throws if the page is already in the view stack; nothing to do when it is showing.
-    if (!this.appViewService.isActive(page)) this.appViewService.open(page);
-    this.activePage.set(page);
+    const svc = this.appViewService;
+    try {
+      if (svc.isInViewStack(page)) {
+        while (!svc.isActive(page)) svc.goBack(1);
+      } else {
+        svc.open(page);
+      }
+      this.activePage.set(page);
+    } catch (e) {
+      console.error(`LandingAnalyzer: could not open ${page}`, e);
+    }
   }
 
   public render(): VNode {
