@@ -53,6 +53,10 @@ export interface RunwayEnd {
   widthM: number;
   /** Pavement before the landing threshold (displaced threshold), metres. */
   displacedM?: number;
+  /** Paved surface (concrete, asphalt and the like). Absent on landings recorded before this was stored. */
+  hard?: boolean;
+  /** The runway has an ILS at either end. Absent on landings recorded before this was stored. */
+  ils?: boolean;
 }
 
 export interface FlareInfo {

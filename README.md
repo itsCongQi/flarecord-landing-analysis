@@ -55,12 +55,21 @@ the sim; see "Next steps" for what still needs checking in flight.
 
 ### Runway markings
 
-The sim's runway data gives the threshold, heading, length, width and displaced threshold, but not
-the paint. The runway view therefore draws the markings at their standard positions: with
-distances in feet, the aiming point at 1,000 ft and touchdown zone bars every 500 ft to 3,000 ft;
-with distances in metres, the aiming point at 150 to 400 m depending on runway length and bars
-every 150 m to 900 m. Markings past mid-runway are left out. An airport with non-standard paint
-will differ slightly; the touchdown distance itself is measured, not drawn.
+The sim's facility data gives each runway's position, heading, length, width, displaced
+threshold, surface and ILS, but not the paint. The runway view therefore draws the markings the
+standards call for on that runway (`runwayMarkings` in `core/units.ts`):
+
+- FAA rules for US airports and ICAO Annex 14 elsewhere, chosen from the airport identifier. The
+  distance unit only sets the scale under the drawing.
+- FAA: aiming point at 1,000 ft and touchdown zone bars every 500 ft to 3,000 ft, none within
+  900 ft of mid-runway. ICAO: aiming point at 150 to 400 m and 1 to 6 pairs of bars every 150 m,
+  both by landing distance available.
+- The touchdown zone is shaded and its length is labelled.
+- The full set on a paved runway with an ILS at either end, the aiming point only on other long
+  paved runways, threshold and centreline on short ones, and nothing on unpaved runways.
+- Threshold stripes by runway width.
+
+An airport with non-standard paint, or scenery that differs from the rules, will not match.
 
 ### Flare detection (this addon's own method)
 
@@ -152,4 +161,4 @@ Run the tests: `npm install && npm test` (Node 22.6+; uses Node's built-in TypeS
    `SimVarSampler.ts`, and runway identification at a few airports, including one with a
    displaced threshold.
 3. Confirm DataStore survives a sim restart (quit both ways).
-4. Then: CSV copy-out, per-aircraft filters, runway markings chosen by region instead of by unit.
+4. Then: CSV copy-out, per-aircraft filters.

@@ -7,7 +7,7 @@
  */
 import { thresholdCrossing } from '../../core/gates.ts';
 import type { LandingSummary, LandingTrace } from '../../core/types.ts';
-import { group, runwayMarkings, type RunwayMarkings, type Units } from '../../core/units.ts';
+import { group, runwayMarkings, type MarkingInput, type RunwayMarkings, type Units } from '../../core/units.ts';
 
 const PAINT = '#c9d1d9';
 const ACCENT = '#5ab0ff';
@@ -29,8 +29,8 @@ interface Scale {
   endX: number;
 }
 
-function scale(lengthM: number, u: Units, furthestM: number): Scale {
-  const mk = runwayMarkings(lengthM, u.s.dist);
+function scale(lengthM: number, u: Units, furthestM: number, rw: MarkingInput = {}): Scale {
+  const mk = runwayMarkings(lengthM, u.s.dist, rw);
   // Show the first 4,000 ft (1,200 m); widen in whole ticks when the touchdown is beyond that.
   let windowM = mk.windowM;
   let tickM = mk.tickM;
@@ -45,13 +45,35 @@ function scale(lengthM: number, u: Units, furthestM: number): Scale {
 
 const n = (v: number) => v.toFixed(1);
 
+/** Threshold stripes: `perSide` on each side of the centreline, filling the width between y0 and y1. */
+function thresholdStripes(y0: number, y1: number, perSide: number): string {
+  if (perSide <= 0) return '';
+  const h = y1 - y0;
+  const sw = (h * 0.42) / (1.6 * perSide - 0.6);
+  const p: string[] = [];
+  for (let i = 0; i < perSide; i++) {
+    p.push(`<rect x="${THR_X + 6}" y="${n(y0 + h * 0.04 + i * sw * 1.6)}" width="27" height="${n(sw)}"/>`);
+    p.push(`<rect x="${THR_X + 6}" y="${n(y1 - h * 0.04 - sw - i * sw * 1.6)}" width="27" height="${n(sw)}"/>`);
+  }
+  return p.join('');
+}
+
 /** Pavement, edges, threshold, centreline and standard markings between y0 and y1. */
-function pavement(sc: Scale, y0: number, y1: number, displacedM: number, detail: boolean): string {
+function pavement(sc: Scale, y0: number, y1: number, displacedM: number, detail: boolean, u?: Units): string {
   const h = y1 - y0;
   const mid = (y0 + y1) / 2;
   const p: string[] = [];
   const startX = Math.max(0, sc.x(-displacedM));
   p.push(`<rect x="${n(startX)}" y="${y0}" width="${n(sc.endX - startX)}" height="${h}" fill="${SURFACE}"/>`);
+  // The touchdown zone as a lighter band, with its length where it ends.
+  if (detail && u && sc.mk.tdzM !== null) {
+    const zx = Math.min(sc.endX, sc.x(sc.mk.tdzM));
+    p.push(`<rect x="${THR_X}" y="${y0}" width="${n(zx - THR_X)}" height="${h}" fill="${PAINT}" opacity="0.06"/>`);
+    if (sc.x(sc.mk.tdzM) <= VB_W) {
+      p.push(`<line x1="${n(zx)}" y1="${y0}" x2="${n(zx)}" y2="${y1}" stroke="${PAINT}" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>`);
+      p.push(`<text x="${n(zx - 8)}" y="${y1 - 7}" class="la-rw-label" text-anchor="end">TDZ ${group(u.dist(sc.mk.tdzM))} ${u.distUnit}</text>`);
+    }
+  }
   if (detail) {
     p.push(`<line x1="${n(startX)}" y1="${y0}" x2="${n(sc.endX)}" y2="${y0}" stroke="${PAINT}" stroke-width="1.5" opacity="0.7"/>`);
     p.push(`<line x1="${n(startX)}" y1="${y1}" x2="${n(sc.endX)}" y2="${y1}" stroke="${PAINT}" stroke-width="1.5" opacity="0.7"/>`);
@@ -60,19 +82,12 @@ function pavement(sc: Scale, y0: number, y1: number, displacedM: number, detail:
   if (sc.endX < VB_W) p.push(`<line x1="${n(sc.endX)}" y1="${y0}" x2="${n(sc.endX)}" y2="${y1}" stroke="${PAINT}" stroke-width="3" opacity="0.85"/>`);
 
   const clStart = detail ? THR_X + 110 : THR_X;
-  p.push(`<line x1="${clStart}" y1="${mid}" x2="${n(sc.endX)}" y2="${mid}" stroke="${PAINT}" stroke-width="${detail ? 2 : 1.5}" stroke-dasharray="27 18" opacity="${detail ? 0.55 : 0.4}"/>`);
+  if (sc.mk.painted !== 'none') p.push(`<line x1="${clStart}" y1="${mid}" x2="${n(sc.endX)}" y2="${mid}" stroke="${PAINT}" stroke-width="${detail ? 2 : 1.5}" stroke-dasharray="27 18" opacity="${detail ? 0.55 : 0.4}"/>`);
 
   p.push(`<g fill="${PAINT}" opacity="${detail ? 0.8 : 0.55}">`);
-  if (detail) {
-    // Threshold stripes: four on each side of the centreline.
-    const sw = h / 15;
-    for (let i = 0; i < 4; i++) {
-      p.push(`<rect x="${THR_X + 6}" y="${n(y0 + sw * 0.75 + i * sw * 1.6)}" width="27" height="${n(sw)}"/>`);
-      p.push(`<rect x="${THR_X + 6}" y="${n(y1 - sw * 1.75 - i * sw * 1.6)}" width="27" height="${n(sw)}"/>`);
-    }
-  }
+  if (detail) p.push(thresholdStripes(y0, y1, sc.mk.thresholdStripes));
   // Aiming point: one solid block each side.
-  if (sc.x(sc.mk.aimingM) < sc.endX) {
+  if (sc.mk.aimingM !== null && sc.x(sc.mk.aimingM) < sc.endX) {
     const ax = sc.x(sc.mk.aimingM);
     const aw = sc.x(sc.mk.aimingLengthM) - THR_X;
     const ah = h / 6;
@@ -121,7 +136,7 @@ export function runwayView(s: LandingSummary, tr: LandingTrace | null, u: Units,
   const g = s.geometry;
   if (!g) return null;
   const rw = g.runway;
-  const sc = scale(rw.lengthM, u, g.distFromThresholdM);
+  const sc = scale(rw.lengthM, u, g.distFromThresholdM, rw);
   const VB_H = 232;
   const y0 = 60;
   const y1 = 180;
@@ -132,7 +147,7 @@ export function runwayView(s: LandingSummary, tr: LandingTrace | null, u: Units,
 
   const p: string[] = [];
   p.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VB_W} ${VB_H}" width="${Math.round(pxWidth)}" height="${Math.round((pxWidth * VB_H) / VB_W)}" class="la-rw">`);
-  p.push(pavement(sc, y0, y1, rw.displacedM ?? 0, true));
+  p.push(pavement(sc, y0, y1, rw.displacedM ?? 0, true, u));
   p.push(`<text x="${THR_X + 78}" y="${mid}" fill="${PAINT}" opacity="0.8" class="la-rw-num" text-anchor="middle" dominant-baseline="middle" transform="rotate(90 ${THR_X + 78} ${mid})">${rw.designation}</text>`);
 
   // Ground track from the recorded samples: dashed on the approach, solid on the rollout.
@@ -189,15 +204,21 @@ export function runwayView(s: LandingSummary, tr: LandingTrace | null, u: Units,
 
   const shown = Math.min(sc.windowM, rw.lengthM);
   const exaggeration = pxPerM / ((VB_W - THR_X) / sc.windowM);
-  const caption =
+  let caption =
     (shown < rw.lengthM ? `First ${group(u.dist(shown))} ${u.distUnit} of ${group(u.dist(rw.lengthM))} ${u.distUnit}` : `Length ${group(u.dist(rw.lengthM))} ${u.distUnit}`) +
     ` · width ${group(u.dist(rw.widthM))} ${u.distUnit} · lateral scale x${exaggeration >= 10 ? exaggeration.toFixed(0) : exaggeration.toFixed(1)}`;
 
-  const dAim = g.distFromThresholdM - sc.mk.aimingM;
+  const paint = { precision: 'markings', aiming: 'markings, aiming point only', basic: 'markings, threshold and centreline only', none: '' }[sc.mk.painted];
+  caption += sc.mk.painted === 'none' ? ' · unpaved, no markings' : ` · standard ${sc.mk.standard} ${paint}`;
+
+  const aimM = sc.mk.aimingM;
+  const dAim = g.distFromThresholdM - (aimM ?? 0);
   const note =
     g.distFromThresholdM < 0
       ? `${group(u.dist(-g.distFromThresholdM))} ${u.distUnit} before the threshold`
-      : `${group(Math.abs(u.dist(dAim)))} ${u.distUnit} ${dAim >= 0 ? 'past' : 'before'} the aiming point (${group(u.dist(sc.mk.aimingM))} ${u.distUnit})`;
+      : aimM === null
+      ? `${group(u.dist(g.distFromThresholdM))} ${u.distUnit} past the threshold`
+      : `${group(Math.abs(u.dist(dAim)))} ${u.distUnit} ${dAim >= 0 ? 'past' : 'before'} the aiming point (${group(u.dist(aimM))} ${u.distUnit})`;
   return { svg: p.join(''), caption, note };
 }
 
@@ -282,12 +303,9 @@ export function rolloutView(s: LandingSummary, tr: LandingTrace, u: Units, pxWid
   p.push(`<line x1="${THR_X}" y1="${y0}" x2="${THR_X}" y2="${y1}" stroke="${PAINT}" stroke-width="3" opacity="0.85"/>`);
   if (endX < VB_W) p.push(`<line x1="${n(endX)}" y1="${y0}" x2="${n(endX)}" y2="${y1}" stroke="${PAINT}" stroke-width="3" opacity="0.85"/>`);
   // Threshold stripes, so the drawing reads as a runway seen from above.
-  const sw = (y1 - y0) / 15;
+  const stripes = runwayMarkings(rw.lengthM, u.s.dist, rw).thresholdStripes;
   p.push(`<g fill="${PAINT}" opacity="0.8">`);
-  for (let i = 0; i < 4; i++) {
-    p.push(`<rect x="${THR_X + 6}" y="${n(y0 + sw * 0.75 + i * sw * 1.6)}" width="27" height="${n(sw)}"/>`);
-    p.push(`<rect x="${THR_X + 6}" y="${n(y1 - sw * 1.75 - i * sw * 1.6)}" width="27" height="${n(sw)}"/>`);
-  }
+  p.push(thresholdStripes(y0, y1, stripes));
   p.push('</g>');
   p.push(`<line x1="${THR_X + 44}" y1="${mid}" x2="${n(endX)}" y2="${mid}" stroke="${PAINT}" stroke-width="2" stroke-dasharray="27 18" opacity="0.55"/>`);
   p.push(`<text x="${THR_X - 12}" y="${y0 + 16}" class="la-rw-side" text-anchor="end">LEFT</text>`);

@@ -5,6 +5,7 @@ import {
   FacilityRepository,
   FacilitySearchType,
   FacilityType,
+  RunwaySurfaceType,
   RunwayUtils,
 } from '@microsoft/msfs-sdk';
 import type { RunwayEnd } from '../core/types.ts';
@@ -17,6 +18,18 @@ import type { RunwayEnd } from '../core/types.ts';
  * end, already moved in by any displaced threshold (startThresholdLength), while its length is the
  * whole pavement. Touchdown distance is therefore measured from the landing threshold.
  */
+/** Surfaces that carry painted markings. */
+const PAVED = [
+  RunwaySurfaceType.Concrete,
+  RunwaySurfaceType.Asphalt,
+  RunwaySurfaceType.Bituminous,
+  RunwaySurfaceType.Tarmac,
+  RunwaySurfaceType.Macadam,
+  RunwaySurfaceType.Brick,
+  RunwaySurfaceType.OilTreated,
+  RunwaySurfaceType.Paint,
+];
+
 export class RunwayProvider {
   private readonly loader: FacilityLoader;
 
@@ -31,6 +44,9 @@ export class RunwayProvider {
     for (const icao of result.added) {
       const airport: AirportFacility = await this.loader.getFacility(FacilityType.Airport, icao);
       for (const rw of RunwayUtils.getOneWayRunwaysFromAirport(airport)) {
+        // Markings are painted for the runway as a whole: an ILS at either end counts.
+        const parent = airport.runways[rw.parentRunwayIndex];
+        const ils = !!rw.ilsFrequency || (!!parent && ((parent.primaryILSFrequency?.freqMHz ?? 0) > 0 || (parent.secondaryILSFrequency?.freqMHz ?? 0) > 0));
         out.push({
           airportIdent: airport.icaoStruct?.ident ?? String(icao).slice(7).trim(),
           designation: rw.designation,
@@ -40,6 +56,8 @@ export class RunwayProvider {
           lengthM: rw.length - (rw.startThresholdLength || 0),
           widthM: rw.width,
           displacedM: rw.startThresholdLength || 0,
+          hard: PAVED.indexOf(rw.surface) >= 0,
+          ils,
         });
       }
     }
