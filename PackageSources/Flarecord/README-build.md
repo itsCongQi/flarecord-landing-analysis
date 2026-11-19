@@ -27,6 +27,10 @@ sample's `efb_api/` and `vendor/` folders next to it, because `@efb/efb-api` is 
 6. Copy `Packages/Packages/flarecord-landing-monitor/` (the folder with `manifest.json` and
    `layout.json`; the project XML adds the inner `Packages`) into your Community folder.
 
+The package also needs `PackageSources/Flarecord/modules/flarecord_storage.wasm`, the storage module
+that keeps the log in files. A built copy is in the repo. To rebuild it from `wasm/flarecord_storage.cpp`,
+run `wasm/build-wasm.ps1`, which uses the compiler in `<MSFS 2024 SDK>/WASM/llvm/bin`.
+
 Notes:
 
 - The app class is named `Flarecord` on purpose. The EFB uses the class name as the app's
