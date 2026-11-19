@@ -28,6 +28,7 @@ export class HistoryPage extends DisplayComponent<Props> {
     const trend = [...rows].slice(0, 30).reverse();
 
     el.innerHTML = `
+      ${log.showingExamples ? '<div class="la-example-note">These are example landings. They go away after your first real touchdown.</div>' : ''}
       <div class="la-stats">
         <div class="la-stat"><span>Landings</span><b>${st?.count ?? 0}</b></div>
         <div class="la-stat"><span>Average score</span><b>${st?.avgScore ?? '--'}</b></div>

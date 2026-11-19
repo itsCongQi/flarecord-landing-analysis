@@ -29,6 +29,7 @@ export class LatestPage extends DisplayComponent<Props> {
     const tile = (label: string, value: string, sub = '') => `<div class="la-tile"><div class="la-tile-label">${label}</div><div class="la-tile-value">${value}</div><div class="la-tile-sub">${sub}</div></div>`;
     const g = s.geometry;
     el.innerHTML = `
+      ${s.example ? '<div class="la-example-note">Example landing. Your own landings replace the examples after your first touchdown.</div>' : ''}
       <div class="la-hero">
         <div class="la-score ${gradeClass(s.score.grade)}"><span class="la-score-num">${s.score.total}</span><span class="la-score-grade">${s.score.grade}</span></div>
         <div class="la-hero-text">

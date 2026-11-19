@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { LandingDetector } from '../PackageSources/LandingAnalyzer/src/core/LandingDetector.ts';
 import { runwayRelative, windComponents, matchRunway } from '../PackageSources/LandingAnalyzer/src/core/geo.ts';
 import { LandingLog, MemoryStore } from '../PackageSources/LandingAnalyzer/src/storage/LandingLog.ts';
@@ -79,4 +80,22 @@ test('log persists across instances, prunes graphs, exports CSV', async () => {
   console.log(`store keys ${store.data.size}, one trace ${traceLen} chars, largest key ${biggest} chars`);
   assert.ok(biggest < 100_000, 'no single key over 100 KB');
   assert.ok(reopened.toCsv().split('\n').length === LandingLog.MAX_TRACES + 6);
+});
+
+test('examples show only while the log is empty and are never stored', async () => {
+  const examples = JSON.parse(readFileSync(new URL('../PackageSources/LandingAnalyzer/src/demo/exampleLandings.json', import.meta.url), 'utf8')) as LandingRecord[];
+  const store = new MemoryStore();
+  const log = new LandingLog(store);
+  log.setExamples(examples);
+  assert.equal(log.showingExamples, true);
+  assert.equal(log.list().length, 3);
+  assert.ok(log.list().every((s) => s.example));
+  assert.ok(log.getTrace('example1'), 'example graphs available');
+  assert.equal(log.stats()?.count, 3);
+  assert.equal(store.data.size, 0, 'examples are not written to the store');
+  const [rec] = await run();
+  log.add(rec);
+  assert.equal(log.showingExamples, false);
+  assert.deepEqual(log.list().map((s) => s.id), [rec.summary.id]);
+  assert.equal(log.stats()?.count, 1);
 });
