@@ -62,7 +62,7 @@ static void Reply(const char* id, const char* status, const char* value, int val
 static void Finish(Job* job, FsIOFile file, const char* status, const char* value, int valueLen)
 {
 	Reply(job->id, status, value, valueLen);
-	if (file != FS_IO_ERROR_FILE)
+	if (file != FS_IO_ERROR_FILE && fsIOIsOpened(file))
 		fsIOClose(file);
 	if (job->buf)
 		free(job->buf);
