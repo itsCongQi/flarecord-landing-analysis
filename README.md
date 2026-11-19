@@ -63,7 +63,7 @@ will differ slightly; the touchdown distance itself is measured, not drawn.
 
 Sink rate 25 · Peak G 15 · Touchdown zone 20 · Centreline 15 · Alignment 10 (crab allowance grows
 with crosswind) · Attitude 10 · No bounce 5. If no runway is identified, the runway categories
-are left out and the rest scaled to 100. A float over 4 s costs up to 10 points. Sink over
+are left out and the rest scaled to 100. A float over 4 s costs up to 10 points.
 The index is off by default; switch it on in Settings.
 
 ### Landing log
