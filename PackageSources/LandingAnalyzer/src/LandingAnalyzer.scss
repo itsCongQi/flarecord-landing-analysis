@@ -55,6 +55,7 @@ $ok: #3fb950;
 .la-seg { display: flex; flex-direction: row; border: 1px solid $line2; border-radius: 4px; }
 .la-seg-btn { background-color: transparent; color: $muted; border: 0; border-right: 1px solid $line2; padding: 13px 18px; font-size: 15px; &:last-child { border-right: 0; } &.on { background-color: $raised; color: $text; } }
 .la-seg-wide { min-width: 96px; }
+.la-seg-small { padding: 9px 14px; font-size: 14px; }
 
 // Legend keys.
 .la-key { display: flex; flex-direction: row; align-items: center; font-size: 14px; color: $muted; margin-right: 22px; }
@@ -63,6 +64,7 @@ $ok: #3fb950;
 .la-key .la-key-line { opacity: 0.6; }
 .la-key .la-key-line2 { border-top-color: $muted; }
 .la-key .la-key-flare { width: 0; height: 16px; border-top: 0; border-left: 2px dashed $flare; }
+.la-key .la-key-gate { width: 0; height: 16px; border-top: 0; border-left: 1px dotted $muted; }
 .la-key .la-key-td { width: 0; height: 16px; border-top: 0; border-left: 2px dashed $text; }
 .la-legend { display: flex; flex-direction: row; align-items: center; margin-top: 4px; }
 .la-legend-note { margin-left: auto; font-size: 14px; color: $soft; }
@@ -92,6 +94,25 @@ $ok: #3fb950;
 .la-guide { stroke: $muted; stroke-dasharray: 2 4; }
 .la-guide-label { fill: $muted; font-size: 10px; }
 .la-marker { font-size: 11px; font-weight: 600; }
+
+// Combined chart: lanes on one time axis, height gates and a tap cursor with a read-out row.
+.la-lane { fill: transparent; }
+.la-lane-label { fill: $muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; }
+.la-gate { stroke: $muted; stroke-width: 1; stroke-dasharray: 1 3; }
+.la-gate-label { fill: $muted; font-size: 10px; }
+.la-cursor-value { fill: $text; font-size: 12px; font-weight: 600; }
+.la-chart-box .la-head-actions .la-key { margin: 0 0 0 20px; }
+.la-chart-box .la-head-actions .la-seg { margin-left: 20px; }
+.la-readout { display: flex; flex-direction: row; align-items: center; min-height: 44px; margin: 6px 0 4px; padding: 0 14px; border: 1px solid $line; border-radius: 4px; background-color: $bg; }
+.la-read { display: flex; flex-direction: row; align-items: baseline; margin-right: 26px; white-space: nowrap; b { margin-left: 8px; font-size: 17px; font-weight: 500; } }
+
+// Values by height.
+.la-gates .la-panel-head { margin-bottom: 0; }
+.la-gates .la-row { min-height: 42px; &.on { background-color: $raised; } }
+.la-gates .la-row-head { min-height: 38px; }
+.la-gcol-h { width: 16%; font-weight: 500; }
+.la-gcol { width: 11%; text-align: right; }
+.la-gcol-w { width: 16%; text-align: right; }
 
 // Log table: fixed-width columns, the aircraft column takes the rest.
 .la-search { width: 260px; box-sizing: border-box; background-color: $panel; border: 1px solid $line2; color: $text; border-radius: 4px; padding: 12px 14px; font-size: 15px; }

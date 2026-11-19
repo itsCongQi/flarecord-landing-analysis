@@ -32,9 +32,12 @@ the sim; see "Next steps" for what still needs checking in flight.
 - **Touchdown**: a top-down runway view with the touchdown point, the approach and rollout ground
   track and the flare start, then the values measured at contact. Previous and Next step through
   the log.
-- **Analysis**: graphs on one time axis (seconds to touchdown) with the flare start and touchdown
-  marked, zoomable to 30 s / 15 s / 8 s: vertical speed, radio altitude, pitch with elevator input
-  overlaid, indicated airspeed, plus the rollout's distance from the centreline.
+- **Analysis**: a table of values at set heights (200, 100, 50, 30, 20 and 10 ft, then
+  touchdown: time, vertical speed, pitch, airspeed, elevator input, centreline offset and distance
+  from the threshold), and one combined chart with radio altitude, vertical speed, pitch, airspeed
+  and elevator input stacked on a shared time axis, zoomable to 30 s / 15 s / 8 s. The heights,
+  flare start and touchdown are marked on it. Tapping the chart or a table row places a cursor and
+  reads every value at that moment. Below it, the rollout's distance from the centreline.
 - **Log**: every landing as a table, medians, and the touchdown points of recent landings overlaid
   on one runway outline. A row opens that landing.
 - **Settings**: units for runway distance (ft or m), height (ft or m), vertical speed (fpm or m/s)
@@ -118,6 +121,7 @@ PackageSources/LandingAnalyzer/
     flare.ts           flare detection
     score.ts           the optional landing index
     units.ts           display units, settings, standard runway marking positions
+    gates.ts           values at set heights, interpolated trace read-out
     geo.ts             runway geometry, wind components, runway matching
   src/storage/         LandingLog (paged DataStore log), DataStoreAdapter
   src/sim/             SimVarSampler (20 Hz SimVar reads), RunwayProvider (FacilityLoader)
