@@ -37,8 +37,11 @@ the sim; see "Next steps" for what still needs checking in flight.
   and elevator input stacked on a shared time axis, zoomable to 30 s / 15 s / 8 s. Tapping the
   chart or a height row places a cursor and reads every value at that moment. Previous and Next
   step through the log.
-- **Log**: every landing as a table, medians, and the touchdown points of recent landings overlaid
-  on one runway outline. A row opens that landing.
+- **Log**: every landing as a table with a filter. A row opens that landing.
+- **Summary**: figures across landings, for the last 10, last 30 or all, filterable by aircraft.
+  Medians, the touchdown points overlaid on one runway outline, and a landing by landing graph of
+  vertical speed, peak load, touchdown point, centreline offset and flare height. Tapping the
+  graph opens that landing.
 - **Settings**: units for runway distance (ft or m), height (ft or m), vertical speed (fpm or m/s)
   and speed (kt or km/h), defaulting to feet, fpm and knots, and the landing index switch. Landings
   are stored in fixed units and converted for display.
@@ -120,11 +123,12 @@ PackageSources/LandingAnalyzer/
     flare.ts           flare detection
     score.ts           the optional landing index
     units.ts           display units, settings, standard runway marking positions
+    summary.ts         medians across landings, aircraft list
     gates.ts           values at set heights, interpolated trace read-out
     geo.ts             runway geometry, wind components, runway matching
   src/storage/         LandingLog (paged DataStore log), DataStoreAdapter
   src/sim/             SimVarSampler (20 Hz SimVar reads), RunwayProvider (FacilityLoader)
-  src/ui/              pages: Landing, Log, Settings; chartSvg and runwaySvg
+  src/ui/              pages: Landing, Log, Summary, Settings; chartSvg and runwaySvg
                        (dependency-free SVG drawings)
   src/AnalyzerService.ts   always-on capture, started from App.install()
   src/LandingAnalyzer.tsx  EFB App + AppView registration

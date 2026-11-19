@@ -9,7 +9,7 @@ interface Props extends ComponentProps {
   active: Subscribable<string>;
 }
 
-const PAGES = ['Landing', 'Log', 'Settings'];
+const PAGES = ['Landing', 'Log', 'Summary', 'Settings'];
 const PHASE_LABEL: Record<string, string> = { idle: 'MONITORING', armed: 'ARMED', rollout: 'RECORDING' };
 
 /** Top bar: page tabs, then a status strip with the capture state and live values. */

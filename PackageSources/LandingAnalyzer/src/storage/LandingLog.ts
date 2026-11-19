@@ -1,3 +1,4 @@
+import { summarize, type LandingStats } from '../core/summary.ts';
 import type { LandingRecord, LandingSummary, LandingTrace } from '../core/types.ts';
 
 /** Minimal key/value store. In the sim this is the DataStore (GetStoredData/SetStoredData). */
@@ -86,17 +87,9 @@ export class LandingLog {
     this.writeIndex();
   }
 
-  /** Medians over the logged landings (touch-and-goes excluded) for the Log page. */
-  stats(): { count: number; medianVs: number; medianTdM: number | null; medianClM: number | null } | null {
-    const xs = this.list().filter((s) => !s.touchAndGo);
-    if (xs.length === 0) return null;
-    const geo = xs.filter((s) => s.geometry);
-    return {
-      count: xs.length,
-      medianVs: median(xs.map((s) => s.touchdownVsFpm)),
-      medianTdM: geo.length ? median(geo.map((s) => s.geometry!.distFromThresholdM)) : null,
-      medianClM: geo.length ? median(geo.map((s) => Math.abs(s.geometry!.centerlineOffsetM))) : null,
-    };
+  /** Medians over the logged landings (touch-and-goes excluded). */
+  stats(): LandingStats | null {
+    return summarize(this.list());
   }
 
   /** CSV of every summary, for copying out of the sim. */
@@ -160,12 +153,6 @@ export class LandingLog {
     this.store.set(LandingLog.PREFIX + 'index.pages', String(pages));
     this.listeners.forEach((fn) => fn());
   }
-}
-
-function median(xs: number[]): number {
-  const s = [...xs].sort((a, b) => a - b);
-  const m = s.length >> 1;
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
 /** In-memory store for tests and for running the UI outside the sim. */
