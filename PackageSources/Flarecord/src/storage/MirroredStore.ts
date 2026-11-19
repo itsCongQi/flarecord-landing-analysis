@@ -151,9 +151,13 @@ export class MirroredStore implements KeyValueStore {
   private async pushAll(rev: number): Promise<void> {
     const bridge = this.bridge as FileBridge;
     for (const k of LandingLog.keysIn(this.inner)) {
-      if (!(await bridge.write(k, this.inner.get(this.prefix + k) ?? ''))) throw new Error(`could not write ${k}`);
+      // Keep the awaited result in a variable: the sim's JS engine cannot parse a negation placed
+      // directly in front of an awaited call, and the bundler removes protective parentheses.
+      const ok = await bridge.write(k, this.inner.get(this.prefix + k) ?? '');
+      if (!ok) throw new Error(`could not write ${k}`);
     }
-    if (!(await this.writeRev(rev))) throw new Error('could not write the revision');
+    const revOk = await this.writeRev(rev);
+    if (!revOk) throw new Error('could not write the revision');
   }
 
   /** Bring what the files hold into the DataStore without dropping anything it has. */
