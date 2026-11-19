@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AssetPackage Version="0.1.0">
+	<ItemSettings>
+		<ContentType>MISC</ContentType>
+		<Title>Landing Analyzer</Title>
+		<Manufacturer/>
+		<Creator>itsCongQi</Creator>
+	</ItemSettings>
+	<Flags>
+		<VisibleInStore>false</VisibleInStore>
+		<CanBeReferenced>true</CanBeReferenced>
+	</Flags>
+	<PackageOrderHint>MISC</PackageOrderHint>
+	<AssetGroups>
+		<AssetGroup Name="ContentInfo">
+			<Type Version="0">ContentInfo</Type>
+			<Flags>
+				<FSXCompatibility>false</FSXCompatibility>
+			</Flags>
+			<AssetDir>PackageDefinitions\landing-analyzer-efb\ContentInfo</AssetDir>
+			<OutputDir>ContentInfo\landing-analyzer-efb</OutputDir>
+		</AssetGroup>
+		<AssetGroup Name="efb_apps_landinganalyzer">
+			<Type Version="0">Copy</Type>
+			<Flags>
+				<FSXCompatibility>false</FSXCompatibility>
+			</Flags>
+			<AssetDir>PackageSources\LandingAnalyzer\dist\</AssetDir>
+			<OutputDir>.\html_ui\efb_ui\efb_apps\LandingAnalyzer\</OutputDir>
+		</AssetGroup>
+	</AssetGroups>
+</AssetPackage>
