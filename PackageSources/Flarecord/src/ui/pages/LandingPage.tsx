@@ -93,6 +93,7 @@ export class LandingPage extends PageBase {
             ${tr && thresholdCrossing(tr) ? '<span class="la-key"><i class="la-key-thr la-key-thr-solid"></i>Over the threshold</span>' : ''}
             <span class="la-legend-note">${view.note}</span>
           </div>
+          <div class="la-method">${view.method ?? ''}</div>
         </div>`
       : `<div class="la-panel la-rw-panel">
           <div class="la-panel-head"><span class="la-label">TOUCHDOWN POINT</span></div>

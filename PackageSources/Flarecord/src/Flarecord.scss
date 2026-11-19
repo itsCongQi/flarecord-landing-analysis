@@ -97,6 +97,8 @@ $thr: #c297ff;
 
 // Runway drawings.
 .la-rw-panel { padding: 14px 20px 12px; }
+// How the drawn markings were derived.
+.la-method { margin-top: 10px; padding-top: 9px; border-top: 1px solid $line; font-size: 13px; line-height: 19px; color: $muted; }
 .la-rw { display: block; }
 .la-rw-label { font-size: 11px; fill: $muted; }
 .la-rw-call { font-size: 12px; font-weight: 600; letter-spacing: 0.6px; }

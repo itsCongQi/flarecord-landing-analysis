@@ -203,6 +203,7 @@ test('trace carries the ground track and the runway view draws it', async () => 
   // The test airport is in the US: FAA positions whatever the unit, and the caption says so.
   assert.ok(metres.svg.includes('>1200 m<') && /aiming point \(305 m\)/.test(metres.note), metres.note);
   assert.ok(feet.caption.endsWith('standard FAA markings') && feet.svg.includes('>TDZ 3,000 ft<'), feet.caption);
+  assert.ok(/standard, not read from the simulator/.test(feet.method!) && /FAA rules/.test(feet.method!) && /aiming point at 1,000 ft/.test(feet.method!) && /TDZ\) to 3,000 ft/.test(feet.method!), feet.method);
   const grass = runwayView({ ...rec.summary, geometry: { ...rec.summary.geometry!, runway: { ...RUNWAY, hard: false } } }, tr, new Units(DEFAULT_SETTINGS), 1100)!;
   assert.ok(grass.caption.endsWith('unpaved, no markings') && !grass.svg.includes('TDZ') && /past the threshold$/.test(grass.note), grass.note);
 
@@ -279,11 +280,11 @@ test('combined chart: cursor values and tap position', async () => {
   const none = stackSvg({ ...base, cursorT: null });
   assert.ok(none.includes('>50 ft<') && !none.includes('la-cursor-value'));
   const t50 = crossingTime(tr, 50)!;
-  assert.ok(stackSvg({ ...base, cursorT: t50 }).includes('class="la-cursor-value" dominant-baseline="middle">50 ft<'));
+  assert.ok(stackSvg({ ...base, cursorT: t50 }).includes('class="la-cursor-value">50 ft<'));
   // Taps left of the plot clamp to the start, right of it to the end, the middle is the middle.
   assert.equal(stackTimeAt(tr.t, 0), tr.t[0]);
   assert.equal(stackTimeAt(tr.t, 1), tr.t[tr.t.length - 1]);
-  const mid = stackTimeAt(tr.t, (44 + (1080 - 44 - 86) / 2) / 1080);
+  const mid = stackTimeAt(tr.t, (44 + (1080 - 44 - 8) / 2) / 1080);
   assert.ok(Math.abs(mid - (tr.t[0] + tr.t[tr.t.length - 1]) / 2) < 1e-6);
 });
 
