@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { LandingDetector, fitSinkRate, groundOffset } from '../PackageSources/Flarecord/src/core/LandingDetector.ts';
 import { METHODS, method } from '../PackageSources/Flarecord/src/ui/methods.ts';
 import { runwayRelative, windComponents, matchRunway } from '../PackageSources/Flarecord/src/core/geo.ts';
@@ -613,4 +613,21 @@ test('file storage: writes made while the files are being checked are sent after
   await starting;
   await settle();
   assert.equal(m.files.get('settings'), '{"vs":"mps"}');
+});
+
+test('source: no unary operator in front of await, which the sim cannot parse once bundled', () => {
+  const root = new URL('../PackageSources/Flarecord/src/', import.meta.url);
+  const bad: string[] = [];
+  const walk = (dir: URL): void => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.isDirectory()) walk(new URL(e.name + '/', dir));
+      else if (/\.tsx?$/.test(e.name)) {
+        readFileSync(new URL(e.name, dir), 'utf8').split('\n').forEach((line, i) => {
+          if (/(?:[!~]|\btypeof|\bvoid)\s*\(?\s*await\b/.test(line)) bad.push(`${e.name}:${i + 1}`);
+        });
+      }
+    }
+  };
+  walk(root);
+  assert.deepEqual(bad, []);
 });
