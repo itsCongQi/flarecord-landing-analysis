@@ -1,4 +1,5 @@
 import type { Settings } from '../../core/units';
+import { METHODS } from '../methods';
 import { PageBase } from './PageBase';
 
 type Key = keyof Settings;
@@ -37,6 +38,10 @@ export class SettingsPage extends PageBase {
       <div class="la-head"><div class="la-head-main"><div class="la-title">Settings</div></div></div>
       ${section('UNITS', UNIT_ROWS)}
       ${section('DISPLAY', DISPLAY_ROWS)}
+      <div class="la-panel la-set la-methods">
+        <div class="la-set-head la-label">METHODOLOGY · how each figure is obtained</div>
+        ${METHODS.map((m) => `<div class="la-method-row"><div class="la-set-title">${m.title}</div><div class="la-method-text">${m.text}</div></div>`).join('')}
+      </div>
       <div class="la-note la-set-foot">Settings are saved with the landing log and apply to every aircraft. Stored landings are kept in fixed units and converted for display, so switching units never changes the data.</div>`;
     this.on(el, '.la-seg-btn', (b) => {
       const key = b.getAttribute('data-k') as Key;

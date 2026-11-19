@@ -129,6 +129,8 @@ export interface RunwayView {
   caption: string;
   /** Line below: touchdown point relative to the aiming point marking. */
   note: string;
+  /** How the markings and the touchdown zone were worked out. Empty for the rollout view. */
+  method?: string;
 }
 
 /** The Touchdown page's runway view: markings, ground track, flare start and touchdown point. */
@@ -219,7 +221,26 @@ export function runwayView(s: LandingSummary, tr: LandingTrace | null, u: Units,
       : aimM === null
       ? `${group(u.dist(g.distFromThresholdM))} ${u.distUnit} past the threshold`
       : `${group(Math.abs(u.dist(dAim)))} ${u.distUnit} ${dAim >= 0 ? 'past' : 'before'} the aiming point (${group(u.dist(aimM))} ${u.distUnit})`;
-  return { svg: p.join(''), caption, note };
+  // How the paint was worked out, since none of it is read from the simulator.
+  const mk = sc.mk;
+  const len = `${group(u.dist(rw.lengthM))} ${u.distUnit}`;
+  const rules = mk.standard === 'FAA' ? 'FAA rules (AC 150/5340-1), used at US airports' : 'ICAO Annex 14 rules, used outside the US';
+  const known = rw.hard === undefined ? ' Surface and ILS were not recorded for this landing, so a paved runway with an ILS is assumed.' : '';
+  let method: string;
+  if (mk.painted === 'none') {
+    method = 'The simulator does not provide runway markings. This runway is unpaved, so none are drawn.';
+  } else {
+    const parts: string[] = [];
+    if (mk.aimingM !== null) parts.push(`aiming point at ${group(u.dist(mk.aimingM))} ${u.distUnit}`);
+    if (mk.bars.length) parts.push(`${mk.bars.length} pair${mk.bars.length === 1 ? '' : 's'} of touchdown zone bars`);
+    if (mk.tdzM !== null) parts.push(`touchdown zone (TDZ) to ${group(u.dist(mk.tdzM))} ${u.distUnit}`);
+    const why = mk.painted === 'precision' ? 'with an ILS' : mk.painted === 'aiming' ? 'without an ILS, so no touchdown zone is marked' : 'short and without an ILS, so only the threshold and centreline are marked';
+    method =
+      `Markings and touchdown zone are standard, not read from the simulator, which does not provide them. Drawn from ${rules}, for a ${len} paved runway ${why}` +
+      (parts.length ? `: ${parts.join(', ')}.` : '.') +
+      ` Positions are measured from the landing threshold; the scenery's own paint may differ.${known}`;
+  }
+  return { svg: p.join(''), caption, note, method };
 }
 
 /**

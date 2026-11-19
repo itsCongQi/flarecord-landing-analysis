@@ -79,15 +79,20 @@ export class AnalyzerService {
         this.selected.set(rec.summary);
       },
     });
-    let n = 0;
-    this.sampler = new SimVarSampler((s) => {
-      this.detector.push(s);
-      // Publishing to the UI at 4 Hz is plenty and keeps Coherent DOM work low.
-      if (++n % 5 === 0) {
-        this.live.set(s);
-        this.phase.set(this.detector.currentPhase);
-      }
-    });
+    let shownT = -1;
+    this.sampler = new SimVarSampler(
+      (s) => {
+        this.detector.push(s);
+        // Publishing to the UI at 4 Hz is plenty and keeps Coherent DOM work low.
+        if (s.t - shownT >= 0.25 || s.t < shownT) {
+          shownT = s.t;
+          this.live.set(s);
+          this.phase.set(this.detector.currentPhase);
+        }
+      },
+      20,
+      () => this.detector.wantsFastSampling,
+    );
     this.sampler.start();
   }
 }

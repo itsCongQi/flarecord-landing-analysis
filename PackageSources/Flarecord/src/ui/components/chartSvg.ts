@@ -143,7 +143,21 @@ export interface StackOptions {
   sequence?: boolean;
 }
 
-const STACK = { width: 1080, padL: 44, padR: 86, padT: 40, lane: 92, gap: 28, padB: 24 };
+const STACK = { width: 1080, padL: 44, padR: 8, padT: 40, lane: 92, gap: 28, padB: 24 };
+
+/**
+ * Approximate drawn width of a lane title (10 px, semi-bold, 1 px letter spacing), in viewBox
+ * units. Text cannot be measured before it is drawn, and it errs on the wide side so a value
+ * placed after the title never overlaps it.
+ */
+function labelWidth(label: string): number {
+  let w = 0;
+  for (let i = 0; i < label.length; i++) {
+    const c = label[i];
+    w += /[A-Z0-9%]/.test(c) ? 8.1 : /[a-z]/.test(c) ? 6.8 : 4.4;
+  }
+  return w;
+}
 
 /** Height of the stacked chart's viewBox for a number of lanes. */
 function stackHeight(lanes: number, extraTop = 0): number {
@@ -166,9 +180,7 @@ export function stackTimeAt(t: number[], fraction: number): number {
  * every lane; the cursor prints each lane's value in the right margin.
  */
 export function stackSvg(o: StackOptions): string {
-  const { width, padL, lane, gap, padB } = STACK;
-  // The right margin holds the cursor read-outs. A sequence chart has none, so it runs to the edge.
-  const padR = o.sequence ? 8 : STACK.padR;
+  const { width, padL, padR, lane, gap, padB } = STACK;
   // Markers with a label get a row of their own above the gate labels.
   const extraTop = (o.markers ?? []).some((m) => m.label) ? 14 : 0;
   const padT = STACK.padT + extraTop;
@@ -239,7 +251,8 @@ export function stackSvg(o: StackOptions): string {
         const span = o.t[ci + 1] - o.t[ci];
         const v = a + (b - a) * (span > 0 ? (cursor - o.t[ci]) / span : 0);
         dots.push(`<circle cx="${x(cursor).toFixed(1)}" cy="${y(v).toFixed(1)}" r="4" fill="#0b0d10" stroke="#e8ecf0" stroke-width="2"/>`);
-        dots.push(`<text x="${padL + w + 10}" y="${(top + lane / 2).toFixed(1)}" class="la-cursor-value" dominant-baseline="middle">${ln.format(v)}</text>`);
+        // The value sits right after the lane's title, so the two read as one line.
+        dots.push(`<text x="${(padL + labelWidth(ln.label) + 14).toFixed(1)}" y="${top - 8}" class="la-cursor-value">${ln.format(v)}</text>`);
       }
     }
   });

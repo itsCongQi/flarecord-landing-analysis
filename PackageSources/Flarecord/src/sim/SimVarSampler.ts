@@ -15,15 +15,19 @@ const YOKE_SIGN = 1; // YOKE Y POSITION: +1 = full pull (verify).
 export class SimVarSampler {
   private timer: number | null = null;
   private lastT = -1;
+  private lastWall = 0;
 
   constructor(
     private readonly onSample: (s: Sample) => void,
     private readonly rateHz = 20,
+    /** When this returns true the sampler runs at fastHz instead (close to and just after touchdown). */
+    private readonly fast: () => boolean = () => false,
+    private readonly fastHz = 60,
   ) {}
 
   start(): void {
     if (this.timer !== null) return;
-    this.timer = window.setInterval(() => this.tick(), 1000 / this.rateHz);
+    this.timer = window.setInterval(() => this.tick(), 1000 / this.fastHz);
   }
 
   stop(): void {
@@ -42,10 +46,14 @@ export class SimVarSampler {
   }
 
   private tick(): void {
+    // The timer runs at the fast rate; outside a touchdown most ticks are skipped.
+    const wall = Date.now();
+    if (!this.fast() && wall - this.lastWall < 1000 / this.rateHz - 3) return;
     const t = SimVar.GetSimVarValue('E:SIMULATION TIME', 'seconds') as number;
     // Paused, or the sim loop hasn't advanced: nothing new to record.
     if (t === this.lastT) return;
     this.lastT = t;
+    this.lastWall = wall;
     const g = (name: string, unit: string) => SimVar.GetSimVarValue(name, unit) as number;
     this.onSample({
       t,

@@ -8,13 +8,31 @@ EFB platform while building it. For what the app does and how to install it, see
 
 | Area | Measured | Notes |
 |---|---|---|
-| Touchdown | sink rate, peak G (first 1 s after contact), IAS, GS, pitch, bank, crab | sink rate prefers the sim's own `PLANE TOUCHDOWN NORMAL VELOCITY` |
+| Touchdown | sink rate at contact, 0.5 s average sink rate, peak G (0.1 s before to 1 s after contact), IAS, GS, pitch, bank, crab | see "Touchdown rate and height" |
 | Wind | headwind and crosswind components at contact | from ambient wind against heading |
 | Bounces | count of re-contacts after at least 0.2 s airborne; touch-and-go detection | |
 | Flare | flare start height and time, sink rate at flare start, pitch added, float time below 5 ft | see "Flare detection" |
 | Runway | airport and runway, distance past the landing threshold (the displaced threshold where there is one), signed centreline offset, ground track, height over the threshold | from the sim's navigation data |
 | Rollout | ground track after touchdown until 30 kt | |
 | Landing index | optional single 0 to 100 figure, hidden unless switched on in Settings | see "Landing index" |
+
+## Touchdown rate and height
+
+- **Rate at contact.** The headline figure is the sim's own `PLANE TOUCHDOWN NORMAL VELOCITY`, read at
+  first wheel contact: the speed at right angles to the ground at that instant.
+- **0.5 s average.** Stored next to it as `avgVsFpm`: the slope of a least-squares line through gear
+  height over the last half second before contact. It is shown under the headline figure as a
+  cross-check, and it becomes the headline figure (`vsSource: 'fit'`) when the sim gives no touchdown
+  value. A single `VERTICAL SPEED` sample is the last resort (`vsSource: 'sample'`).
+- **Height zero.** `PLANE ALT ABOVE GROUND MINUS CG` does not read exactly 0 on the wheels in every
+  aircraft. For each landing the median reading on the ground from 1 s after contact is subtracted
+  from every height (`aglOffsetFt`); with too little rollout, the reading taken while standing before
+  the flight is used, then the contact sample.
+- **Sampling.** 20 Hz normally, up to 60 Hz from arming until 3 s after contact, limited by the
+  frame rate.
+
+The same explanations are shown in the app: a "?" next to a figure opens a note, and Settings has
+a Methodology section. Both come from `src/ui/methods.ts`.
 
 ## Runway markings
 
