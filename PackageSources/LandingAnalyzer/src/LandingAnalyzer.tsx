@@ -3,7 +3,7 @@
  * (<SDK>/Samples/DevmodeProjects/EFB/PackageSources/TemplateApp).
  */
 import { App, AppBootMode, AppInstallProps, AppSuspendMode, AppView, AppViewProps, Efb, RequiredProps, TVNode } from '@efb/efb-api';
-import { FSComponent, VNode } from '@microsoft/msfs-sdk';
+import { FSComponent, Subject, VNode } from '@microsoft/msfs-sdk';
 import { AnalyzerService } from './AnalyzerService';
 import { AnalysisPage } from './ui/pages/AnalysisPage';
 import { HistoryPage } from './ui/pages/HistoryPage';
@@ -14,6 +14,7 @@ import './LandingAnalyzer.scss';
 
 class LandingAnalyzerView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
   protected defaultView = 'Latest';
+  private readonly activePage = Subject.create('Latest');
 
   protected registerViews(): void {
     const svc = AnalyzerService.instance;
@@ -23,13 +24,15 @@ class LandingAnalyzerView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
   }
 
   private go(page: string): void {
-    this.appViewService.open(page);
+    // open() throws if the page is already in the view stack; nothing to do when it is showing.
+    if (!this.appViewService.isActive(page)) this.appViewService.open(page);
+    this.activePage.set(page);
   }
 
   public render(): VNode {
     return (
       <div class="la-app">
-        <TabBar svc={AnalyzerService.instance} go={(p) => this.go(p)} />
+        <TabBar svc={AnalyzerService.instance} go={(p) => this.go(p)} active={this.activePage} />
         <div class="la-body">{super.render()}</div>
       </div>
     );

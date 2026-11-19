@@ -1,15 +1,18 @@
-import { ComponentProps, DisplayComponent, FSComponent, VNode } from '@microsoft/msfs-sdk';
+import { UiView, UiViewProps } from '@efb/efb-api';
+import { FSComponent, VNode } from '@microsoft/msfs-sdk';
 import type { AnalyzerService } from '../../AnalyzerService';
 import { chartSvg } from '../components/chartSvg';
 import { fmtWhen, gradeClass, where } from '../format';
 
-interface Props extends ComponentProps {
+interface Props extends UiViewProps {
   svc: AnalyzerService;
   go: (page: string) => void;
 }
 
 /** History: personal stats, a score trend line and the list of every logged landing. */
-export class HistoryPage extends DisplayComponent<Props> {
+// A UiView: AppViewService calls onOpen/onResume/onPause on every registered page.
+export class HistoryPage extends UiView<Props> {
+  public readonly tabName = 'History';
   private readonly root = FSComponent.createRef<HTMLDivElement>();
   private filter = '';
 
@@ -55,9 +58,9 @@ export class HistoryPage extends DisplayComponent<Props> {
       this.filter = (e.target as HTMLInputElement).value.toLowerCase();
       this.draw();
     });
-    el.querySelectorAll<HTMLDivElement>('.la-row').forEach((r) =>
+    Array.from(el.querySelectorAll<HTMLDivElement>('.la-row')).forEach((r) =>
       r.addEventListener('click', () => {
-        const s = log.list().find((x) => x.id === r.dataset.id) ?? null;
+        const s = log.list().find((x) => x.id === r.getAttribute('data-id')) ?? null;
         this.props.svc.selected.set(s);
         this.props.go('Latest');
       }),

@@ -1,10 +1,11 @@
-import { ComponentProps, DisplayComponent, FSComponent, VNode } from '@microsoft/msfs-sdk';
+import { UiView, UiViewProps } from '@efb/efb-api';
+import { FSComponent, VNode } from '@microsoft/msfs-sdk';
 import type { AnalyzerService } from '../../AnalyzerService';
 import type { LandingSummary, LandingTrace } from '../../core/types';
 import { chartSvg, type ChartMarker } from '../components/chartSvg';
 import { where } from '../format';
 
-interface Props extends ComponentProps {
+interface Props extends UiViewProps {
   svc: AnalyzerService;
 }
 
@@ -13,7 +14,9 @@ interface Props extends ComponentProps {
  * FLARE and TD markers, plus a rollout centreline graph when the runway was identified.
  * A window switch zooms between the last 30 s (approach) and the last 10 s (flare).
  */
-export class AnalysisPage extends DisplayComponent<Props> {
+// A UiView: AppViewService calls onOpen/onResume/onPause on every registered page.
+export class AnalysisPage extends UiView<Props> {
+  public readonly tabName = 'Analysis';
   private readonly root = FSComponent.createRef<HTMLDivElement>();
   private windowS = 15;
 
@@ -37,9 +40,10 @@ export class AnalysisPage extends DisplayComponent<Props> {
       </div>
       <div class="la-charts">${this.charts(s, tr)}</div>
       <div class="la-flare-facts">${this.facts(s)}</div>`;
-    el.querySelectorAll<HTMLButtonElement>('.la-seg-btn').forEach((b) =>
+    // Array.from + getAttribute: NodeList.forEach and dataset are not reliable in Coherent.
+    Array.from(el.querySelectorAll<HTMLButtonElement>('.la-seg-btn')).forEach((b) =>
       b.addEventListener('click', () => {
-        this.windowS = Number(b.dataset.w);
+        this.windowS = Number(b.getAttribute('data-w'));
         this.draw();
       }),
     );
