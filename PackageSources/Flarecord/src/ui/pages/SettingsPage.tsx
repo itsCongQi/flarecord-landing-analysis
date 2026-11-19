@@ -1,4 +1,5 @@
 import type { Settings } from '../../core/units';
+import { esc } from '../format';
 import { METHODS } from '../methods';
 import { PageBase } from './PageBase';
 
@@ -38,6 +39,7 @@ export class SettingsPage extends PageBase {
       <div class="la-head"><div class="la-head-main"><div class="la-title">Settings</div></div></div>
       ${section('UNITS', UNIT_ROWS)}
       ${section('DISPLAY', DISPLAY_ROWS)}
+      ${this.files()}
       <div class="la-panel la-set la-methods">
         <div class="la-set-head la-label">METHODOLOGY · how each figure is obtained</div>
         ${METHODS.map((m) => `<div class="la-method-row"><div class="la-set-title">${m.title}</div><div class="la-method-text">${m.text}</div></div>`).join('')}
@@ -49,5 +51,36 @@ export class SettingsPage extends PageBase {
       // Setting the value redraws every page, this one included.
       this.props.svc.setSettings({ [key]: key === 'index' ? v === 'true' : v } as Partial<Settings>);
     });
+  }
+
+  /** Where the data is kept and how to back it up, with the current state of file storage. */
+  private files(): string {
+    const store = this.props.svc.store;
+    const failed = store.failures > 0 ? ` ${store.failures} write${store.failures === 1 ? '' : 's'} to the files failed this session; the simulator's save data still has them.` : '';
+    const status =
+      store.state === 'active'
+        ? `<span class="la-file-ok">Saving to files</span>${store.moduleVersion ? ` · storage module ${esc(store.moduleVersion)}` : ''}.${failed}`
+        : store.state === 'starting'
+          ? 'Checking the files.'
+          : `<span class="la-file-off">File storage is not running.</span> Landings are being kept in the simulator's own save data only, which cannot be backed up by hand. Check that the package's modules folder is installed and restart the simulator.`;
+    const row = (title: string, body: string) => `<div class="la-method-row"><div class="la-set-title">${title}</div><div class="la-method-text">${body}</div></div>`;
+    return `
+      <div class="la-panel la-set la-files">
+        <div class="la-set-head la-label">FILES · where your data is and how to back it up</div>
+        ${row('Status', status)}
+        ${row(
+          'Where the data is',
+          `Landings, graphs and settings are saved as plain files in the simulator's work folder for this addon. The simulator's own save data holds a second copy, used for fast start-up.
+          <div class="la-path">%APPDATA%\\Microsoft Flight Simulator 2024\\WASM\\MSFS2024\\flarecord-landing-monitor\\work</div>
+          On the Microsoft Store version the same WASM folder is under
+          <div class="la-path">%LOCALAPPDATA%\\Packages\\Microsoft.Limitless_8wekyb3d8bbwe\\LocalState</div>
+          Paste a path into the address bar of File Explorer to open it. <b>index.0.json</b> and up hold the landings, 50 per file, each <b>trace.….json</b> holds the graphs of one landing, and <b>settings.json</b> holds your settings.`,
+        )}
+        ${row('Back up', 'Close the simulator, then copy the whole <b>work</b> folder somewhere safe. Updating or reinstalling Flarecord does not touch this folder, but removing the simulator can.')}
+        ${row(
+          'Restore or move to another PC',
+          'With the simulator closed, copy the saved files back into the <b>work</b> folder, replacing what is there, and start the simulator. Flarecord merges them with what the simulator still has: landings from both are kept, and settings come from the files.',
+        )}
+      </div>`;
   }
 }

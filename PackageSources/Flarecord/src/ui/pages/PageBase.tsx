@@ -34,6 +34,7 @@ export abstract class PageBase extends UiView<PageProps> {
     this.props.svc.settings.sub(() => this.redraw());
     this.props.svc.selected.sub(() => this.redraw());
     this.props.svc.log.onChange(() => this.redraw());
+    this.props.svc.fileState.sub(() => this.redraw());
     // A tap anywhere else closes an open explanation.
     this.root.instance.addEventListener('click', () => {
       if (this.helpTapped) this.helpTapped = false;

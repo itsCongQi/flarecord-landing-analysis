@@ -84,8 +84,9 @@ Until your first landing the app shows example data, labelled as such.
   airports and ICAO rules elsewhere, scaled to the runway. Scenery that differs will not match.
 - **Runway identification comes from the sim's navigation data.** If no runway is matched, the
   landing is still recorded, without the runway views.
-- **Your data stays in the sim.** Landings are stored in the simulator's own data store, up to
-  500 of them, with charts for the newest 60.
+- **Your data is in plain files you can back up.** Landings are saved in the simulator's work
+  folder for this addon, up to 500 of them, with charts for the newest 60. Settings in the app
+  shows the folder and how to back it up or move it to another PC.
 - **Still being proven in flight.** The analysis is tested against simulated landings, and the
   app builds and loads in the sim. Recording with the tablet closed, and runway matching across
   many airports, are still being checked.

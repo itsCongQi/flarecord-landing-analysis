@@ -78,6 +78,28 @@ the sim.
 A log saved by an earlier build under the `LANDAN.v1.` key prefix is moved to `FLARECORD.v1.` on
 first start.
 
+## File storage
+
+The DataStore cannot be backed up by hand and has a reported loss on "Quit to desktop", so the same
+data is also kept as files. JavaScript in the sim cannot write files; a WASM module can, inside its
+package's work folder. The package therefore carries a small standalone module,
+`modules/flarecord_storage.wasm` (source in `PackageSources/Flarecord/wasm`).
+
+- **Protocol.** The app sends `FLARECORD_FS_REQ` over the Comm Bus as `<id>\n<op>\n<key>\n<value>`
+  (`P` ping, `R` read, `W` write) and the module answers on `FLARECORD_FS_RES` with
+  `<id>\n<status>\n<value>` (`OK`, `MISSING`, `ERR`). One file per key, `/work/<key>.json`; keys are
+  limited to letters, digits, `.`, `-` and `_`. The app sends one request at a time.
+- **Mirror.** `MirroredStore` writes every key to the DataStore (synchronous, used for reads) and to
+  the files. A revision number kept on both sides is compared at start: no revision in the files
+  copies everything out, an equal one does nothing, and a different one merges the two (landings
+  from both sides by id, settings and the unread list from the files) and writes the result to both.
+- **Fallback.** If the module does not answer within 15 s of start, the app runs on the DataStore
+  alone and Settings says so.
+- **Location.** `%APPDATA%\Microsoft Flight Simulator 2024\WASM\MSFS2024\flarecord-landing-monitor\work`
+  on the Steam version.
+- **Build.** `wasm/build-wasm.ps1` calls the SDK's own `clang-cl` and `wasm-ld`; Visual Studio is
+  not needed. The built module is committed, so the app can be built without compiling it.
+
 ## MSFS 2024 EFB platform notes (checked November 2026)
 
 - **EFB apps are a supported SDK feature.** You build an app, not a custom EFB; once packaged it
@@ -112,7 +134,8 @@ PackageSources/Flarecord/
     summary.ts         medians across landings, aircraft list
     gates.ts           values at set heights, interpolated trace read-out
     geo.ts             runway geometry, wind components, runway matching
-  src/storage/         LandingLog (paged DataStore log), DataStoreAdapter
+  src/storage/         LandingLog (paged log), DataStoreAdapter, MirroredStore and FileBridge (file copy)
+  wasm/                the storage module's source and build script; modules/ holds the built .wasm
   src/sim/             SimVarSampler (20 Hz SimVar reads), RunwayProvider (FacilityLoader)
   src/ui/              pages: Landing, Log, Summary, Settings; chartSvg and runwaySvg
                        (dependency-free SVG drawings)

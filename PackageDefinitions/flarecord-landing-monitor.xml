@@ -28,5 +28,13 @@
 			<AssetDir>PackageSources\Flarecord\dist\</AssetDir>
 			<OutputDir>.\html_ui\efb_ui\efb_apps\Flarecord\</OutputDir>
 		</AssetGroup>
+		<AssetGroup Name="modules_flarecord">
+			<Type Version="0">Copy</Type>
+			<Flags>
+				<FSXCompatibility>false</FSXCompatibility>
+			</Flags>
+			<AssetDir>PackageSources\Flarecord\modules\</AssetDir>
+			<OutputDir>modules\</OutputDir>
+		</AssetGroup>
 	</AssetGroups>
 </AssetPackage>
