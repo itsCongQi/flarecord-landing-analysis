@@ -108,6 +108,8 @@ export interface LandingSummary {
   flare: FlareInfo;
   geometry: TouchdownGeometry | null;
   score: ScoreBreakdown;
+  /** True for the built-in example landings shown while the log is empty (never stored). */
+  example?: boolean;
 }
 
 /** Downsampled time series kept for the graphs. t is seconds relative to first contact. */
