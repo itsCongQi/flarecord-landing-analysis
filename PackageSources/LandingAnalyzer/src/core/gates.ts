@@ -92,3 +92,22 @@ export function heightGates(tr: LandingTrace, unit: 'ft' | 'm'): Gate[] {
   out.push({ ...traceAt(tr, 0), height: null });
   return out;
 }
+
+/**
+ * The aircraft's state as it passed over the landing threshold on the way to this touchdown, or
+ * null when no runway was matched, the recording starts past the threshold, or the touchdown was
+ * short of it.
+ */
+export function thresholdCrossing(tr: LandingTrace): TracePoint | null {
+  if (!tr.along) return null;
+  let td = tr.t.findIndex((t) => t >= 0);
+  if (td < 0) td = tr.t.length - 1;
+  for (let i = td - 1; i >= 0; i--) {
+    const a = tr.along[i];
+    const b = tr.along[i + 1];
+    if (a === null || a === undefined || b === null || b === undefined) continue;
+    if (b < 0) return null;
+    if (a < 0) return traceAt(tr, lerp(tr.t[i], tr.t[i + 1], b - a > 1e-9 ? -a / (b - a) : 0));
+  }
+  return null;
+}

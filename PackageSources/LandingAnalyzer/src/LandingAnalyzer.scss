@@ -14,6 +14,7 @@ $muted: #8a94a0;
 $accent: #5ab0ff;
 $flare: #e3b341;
 $ok: #3fb950;
+$thr: #c297ff;
 
 .la-app { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; background-color: $bg; color: $text; font-size: 17px; }
 
@@ -79,6 +80,8 @@ $ok: #3fb950;
 .la-key .la-key-line2 { border-top-color: $muted; }
 .la-key .la-key-flare { width: 0; height: 16px; border-top: 0; border-left: 2px dashed $flare; }
 .la-key .la-key-gate { width: 0; height: 16px; border-top: 0; border-left: 1px dotted $muted; }
+.la-key .la-key-thr { width: 0; height: 16px; border-top: 0; border-left: 2px dashed $thr; }
+.la-key .la-key-thr-solid { border-left-style: solid; }
 .la-key .la-key-td { width: 0; height: 16px; border-top: 0; border-left: 2px dashed $text; }
 .la-legend { display: flex; flex-direction: row; align-items: center; margin-top: 4px; }
 .la-legend-note { margin-left: auto; font-size: 14px; color: $soft; }
@@ -116,6 +119,7 @@ $ok: #3fb950;
 .la-lane-label { fill: $muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; }
 .la-gate { stroke: $muted; stroke-width: 1; stroke-dasharray: 1 3; }
 .la-gate-label { fill: $muted; font-size: 10px; }
+.la-marker-label { font-size: 10px; font-weight: 600; letter-spacing: 0.6px; }
 .la-cursor-value { fill: $text; font-size: 12px; font-weight: 600; }
 .la-chart-box .la-head-actions .la-key { margin: 0 0 0 20px; }
 .la-chart-box .la-head-actions .la-seg { margin-left: 20px; }
@@ -136,7 +140,16 @@ $ok: #3fb950;
 .la-row { display: flex; flex-direction: row; align-items: center; min-height: 50px; padding: 0 18px; border-bottom: 1px solid $line; font-size: 15px; margin-bottom: -1px; &:hover { background-color: $raised; } }
 .la-row-head { min-height: 42px; font-size: 12px; font-weight: 600; letter-spacing: 1px; color: $muted; &:hover { background-color: transparent; } }
 .la-col { flex-shrink: 0; box-sizing: border-box; padding-right: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.la-col-date { width: 13%; color: $muted; }
+.la-col-date { width: 15%; color: $muted; display: flex; flex-direction: row; align-items: center; }
+.la-when { display: block; color: $soft; }
+.la-ago { display: block; margin-top: 2px; font-size: 12px; color: $muted; }
+// Amber dot for a landing that has not been opened yet. Read rows keep the space so columns line up.
+.la-new-dot { display: block; flex-shrink: 0; width: 8px; height: 8px; border-radius: 4px; margin-right: 10px; background-color: transparent; &.on { background-color: $flare; } }
+// Notice at the top of Summary for landings recorded but not opened.
+.la-notice { display: flex; flex-direction: row; align-items: center; border: 1px solid $flare; background-color: #1d1a10; border-radius: 6px; padding: 10px 14px 10px 18px; margin-bottom: 16px; .la-btn { margin-left: 10px; flex-shrink: 0; } }
+.la-notice-main { flex-grow: 1; flex-shrink: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; b { font-weight: 600; margin-right: 12px; } span { color: $soft; } }
+.la-btn-accent { border-color: $flare; color: $flare; }
+.la-gates .la-row-thr .la-gcol-h { color: $thr; }
 .la-col-rwy { width: 12%; font-weight: 500; }
 .la-col-ac { flex-grow: 1; flex-shrink: 1; width: 0; color: $soft; }
 .la-col-n0 { width: 8%; text-align: right; }

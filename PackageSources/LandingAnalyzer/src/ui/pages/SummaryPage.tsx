@@ -3,7 +3,7 @@ import type { LandingSummary } from '../../core/types';
 import { group } from '../../core/units';
 import { stackSvg, stackTimeAt } from '../components/chartSvg';
 import { dispersionStrip } from '../components/runwaySvg';
-import { esc } from '../format';
+import { esc, fmtAgo, where } from '../format';
 import { EXAMPLE_NOTE, PageBase } from './PageBase';
 
 const LINE = '#5ab0ff';
@@ -28,6 +28,8 @@ export class SummaryPage extends PageBase {
   private selection: AircraftSelection | undefined;
   private pickerOpen = false;
   private search = '';
+  /** Newest unread landing whose notice was dismissed; a later landing shows the notice again. */
+  private dismissedId = '';
 
   protected draw(el: HTMLDivElement): void {
     const log = this.props.svc.log;
@@ -51,7 +53,20 @@ export class SummaryPage extends PageBase {
     // Oldest to newest, left to right.
     const seq: LandingSummary[] = shown.filter((s) => !s.touchAndGo).reverse();
 
+    // Landings recorded but not opened yet: a notice that opens the newest one.
+    const unread = log.unreadList();
+    const fresh = unread.length && unread[0].id !== this.dismissedId ? unread[0] : null;
+    const notice = fresh
+      ? `<div class="la-notice">
+          <i class="la-new-dot on"></i>
+          <div class="la-notice-main"><b>${unread.length === 1 ? 'New landing recorded' : `${unread.length} new landings recorded`}</b><span>${unread.length === 1 ? '' : 'Latest: '}${esc(where(fresh))} · ${esc(fresh.aircraft)} · ${fmtAgo(fresh.recordedAt)}</span></div>
+          <button class="la-btn la-btn-small la-btn-accent" data-act="open-new">Open landing</button>
+          <button class="la-btn la-btn-small" data-act="dismiss-new">Dismiss</button>
+        </div>`
+      : '';
+
     el.innerHTML = `
+      ${notice}
       ${log.showingExamples ? EXAMPLE_NOTE : ''}
       <div class="la-head">
         <div class="la-head-main"><div class="la-title">Summary</div><div class="la-sub">${shown.length} of ${all.length} landing${all.length === 1 ? '' : 's'}</div></div>
@@ -78,6 +93,15 @@ export class SummaryPage extends PageBase {
       }`;
     el.scrollTop = scroll;
 
+    this.on(el, '[data-act="open-new"]', () => {
+      if (!fresh) return;
+      this.props.svc.selected.set(fresh);
+      this.props.go('Landing');
+    });
+    this.on(el, '[data-act="dismiss-new"]', () => {
+      if (fresh) this.dismissedId = fresh.id;
+      this.redraw();
+    });
     this.on(el, '[data-range]', (b) => {
       // getAttribute: dataset is not reliable in Coherent.
       this.range = Number(b.getAttribute('data-range'));

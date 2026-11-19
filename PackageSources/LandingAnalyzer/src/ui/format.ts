@@ -9,6 +9,19 @@ export function fmtWhen(ms: number, withYear = false): string {
   return `${d.getDate()} ${MONTHS[d.getMonth()]}${withYear ? ' ' + d.getFullYear() + ',' : ''} ${two(d.getHours())}:${two(d.getMinutes())}`;
 }
 
+/**
+ * "just now", "5 minutes ago", "3 hours ago", then whole days from one day on. A time in the
+ * future (a clock change) reads as "just now".
+ */
+export function fmtAgo(ms: number, now: number = Date.now()): string {
+  const min = Math.floor((now - ms) / 60000);
+  const n = (v: number, unit: string) => `${v} ${unit}${v === 1 ? '' : 's'} ago`;
+  if (min < 1) return 'just now';
+  if (min < 60) return n(min, 'minute');
+  if (min < 1440) return n(Math.floor(min / 60), 'hour');
+  return n(Math.floor(min / 1440), 'day');
+}
+
 export function airport(s: LandingSummary): string {
   return s.geometry ? s.geometry.runway.airportIdent : '';
 }

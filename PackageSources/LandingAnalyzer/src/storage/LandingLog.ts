@@ -15,6 +15,7 @@ export interface KeyValueStore {
  *   LANDAN.v1.index.pages  number of index pages
  *   LANDAN.v1.index.<n>    JSON array of up to PAGE_SIZE LandingSummary, newest first
  *   LANDAN.v1.trace.<id>   JSON LandingTrace for one landing (loaded on demand for graphs)
+ *   LANDAN.v1.unread       JSON array of ids of landings that have not been opened yet
  *
  * Summaries are about 1.3 KB each and traces about 8 KB (measured by the tests). The SDK does
  * not document a size limit, so no single key is allowed to grow past roughly 70 KB: the index
@@ -32,10 +33,29 @@ export class LandingLog {
   private readonly listeners = new Set<() => void>();
   /** Example landings shown while the log is empty. Kept in memory only, never written. */
   private examples: LandingRecord[] = [];
+  /** Ids of landings recorded but not opened yet. Landings logged before this existed count as read. */
+  private unread = new Set<string>();
 
   constructor(store: KeyValueStore) {
     this.store = store;
     this.index = this.readIndex();
+    this.unread = this.readUnread();
+  }
+
+  isUnread(id: string): boolean {
+    return this.unread.has(id);
+  }
+
+  /** Landings not opened yet, newest first. */
+  unreadList(): LandingSummary[] {
+    return this.index.filter((s) => this.unread.has(s.id));
+  }
+
+  /** Mark a landing as opened. Does nothing (and notifies nobody) when it already was. */
+  markRead(id: string): void {
+    if (!this.unread.delete(id)) return;
+    this.writeUnread();
+    this.listeners.forEach((fn) => fn());
   }
 
   /** Set the examples to show while no real landing has been logged. */
@@ -71,6 +91,7 @@ export class LandingLog {
 
   add(rec: LandingRecord): void {
     this.index.unshift(rec.summary);
+    this.unread.add(rec.summary.id);
     if (rec.trace) this.store.set(LandingLog.PREFIX + 'trace.' + rec.summary.id, JSON.stringify(rec.trace));
 
     // Prune graphs beyond MAX_TRACES and summaries beyond MAX_SUMMARIES.
@@ -78,12 +99,14 @@ export class LandingLog {
       this.store.remove(LandingLog.PREFIX + 'trace.' + this.index[i].id);
     }
     if (this.index.length > LandingLog.MAX_SUMMARIES) this.index.length = LandingLog.MAX_SUMMARIES;
+    this.writeUnread();
     this.writeIndex();
   }
 
   remove(id: string): void {
     this.index = this.index.filter((s) => s.id !== id);
     this.store.remove(LandingLog.PREFIX + 'trace.' + id);
+    if (this.unread.delete(id)) this.writeUnread();
     this.writeIndex();
   }
 
@@ -140,6 +163,28 @@ export class LandingLog {
       }
     }
     return out;
+  }
+
+  private readUnread(): Set<string> {
+    const out = new Set<string>();
+    try {
+      const parsed = JSON.parse(this.store.get(LandingLog.PREFIX + 'unread') ?? '[]');
+      const known = new Set(this.index.map((s) => s.id));
+      if (Array.isArray(parsed)) for (const id of parsed) if (typeof id === 'string' && known.has(id)) out.add(id);
+    } catch {
+      // Damaged list: everything counts as read.
+    }
+    return out;
+  }
+
+  private writeUnread(): void {
+    // Drop ids of landings that have been pruned from the log.
+    const known = new Set(this.index.map((s) => s.id));
+    Array.from(this.unread).forEach((id) => {
+      if (!known.has(id)) this.unread.delete(id);
+    });
+    if (this.unread.size === 0) this.store.remove(LandingLog.PREFIX + 'unread');
+    else this.store.set(LandingLog.PREFIX + 'unread', JSON.stringify(Array.from(this.unread)));
   }
 
   private writeIndex(): void {

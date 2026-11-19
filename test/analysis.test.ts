@@ -5,11 +5,12 @@ import { LandingDetector } from '../PackageSources/LandingAnalyzer/src/core/Land
 import { runwayRelative, windComponents, matchRunway } from '../PackageSources/LandingAnalyzer/src/core/geo.ts';
 import { LandingLog, MemoryStore } from '../PackageSources/LandingAnalyzer/src/storage/LandingLog.ts';
 import type { LandingRecord } from '../PackageSources/LandingAnalyzer/src/core/types.ts';
-import { crossingTime, heightGates, traceAt } from '../PackageSources/LandingAnalyzer/src/core/gates.ts';
+import { crossingTime, heightGates, thresholdCrossing, traceAt } from '../PackageSources/LandingAnalyzer/src/core/gates.ts';
 import { stackSvg, stackTimeAt } from '../PackageSources/LandingAnalyzer/src/ui/components/chartSvg.ts';
 import { aircraftCounts, filterByAircraft, parseSelection, summarize, toggleAircraft } from '../PackageSources/LandingAnalyzer/src/core/summary.ts';
 import { DEFAULT_SETTINGS, Units, group, parseSettings, runwayMarkings } from '../PackageSources/LandingAnalyzer/src/core/units.ts';
 import { dispersionStrip, rolloutView, runwayView } from '../PackageSources/LandingAnalyzer/src/ui/components/runwaySvg.ts';
+import { fmtAgo } from '../PackageSources/LandingAnalyzer/src/ui/format.ts';
 import { RUNWAY, simulate, type Scenario } from './simulate.ts';
 
 async function run(sc: Partial<Scenario> = {}): Promise<LandingRecord[]> {
@@ -290,4 +291,58 @@ test('rollout view: top-down strip with left of the centreline drawn above it', 
   // Nothing to draw without a matched runway, or for a trace recorded before positions were kept.
   assert.equal(rolloutView({ ...rec.summary, geometry: null }, tr, u, 1100), null);
   assert.equal(rolloutView(rec.summary, { ...tr, along: undefined }, u, 1100), null);
+});
+
+test('threshold crossing: height over the threshold, on the runway view and the chart', async () => {
+  const rec = (await run())[0];
+  const tr = rec.trace!;
+  const thr = thresholdCrossing(tr)!;
+  assert.ok(thr.t < 0, 'crossed before touchdown');
+  assert.ok(Math.abs(thr.along!) < 1, `position is the threshold: ${thr.along}`);
+  assert.ok(thr.agl > 5 && thr.agl < 200, `plausible height: ${thr.agl}`);
+  // Same moment as reading the trace at that time.
+  assert.ok(Math.abs(traceAt(tr, thr.t).agl - thr.agl) < 1e-9);
+  const u = new Units(DEFAULT_SETTINGS);
+  assert.ok(runwayView(rec.summary, tr, u, 1100)!.svg.includes(`THRESHOLD ${Math.round(thr.agl)} ft RA`));
+  assert.ok(!runwayView(rec.summary, null, u, 1100)!.svg.includes('THRESHOLD'));
+  const svg = stackSvg({ t: tr.t, pxWidth: 1000, cursorT: null, markers: [{ t: thr.t, label: 'THRESHOLD 50 ft', color: '#fff' }], lanes: [{ label: 'RA', values: tr.agl, color: '#fff', format: String }] });
+  assert.ok(svg.includes('>THRESHOLD 50 ft<'));
+  // No crossing without positions, or when the recording never was before the threshold.
+  assert.equal(thresholdCrossing({ ...tr, along: undefined }), null);
+  assert.equal(thresholdCrossing({ ...tr, along: tr.along!.map((a) => (a === null ? null : Math.abs(a) + 1)) }), null);
+});
+
+test('unread landings: new until opened, kept across a restart', async () => {
+  const store = new MemoryStore();
+  const log = new LandingLog(store);
+  const [a] = await run();
+  const b = { ...a, summary: { ...a.summary, id: 'second' } };
+  log.add(a);
+  log.add(b);
+  assert.deepEqual(log.unreadList().map((s) => s.id), ['second', a.summary.id]);
+  let changes = 0;
+  log.onChange(() => changes++);
+  log.markRead('second');
+  log.markRead('second');
+  assert.equal(changes, 1, 'marking read notifies once');
+  assert.equal(log.isUnread('second'), false);
+  assert.equal(new LandingLog(store).isUnread(a.summary.id), true, 'survives a restart');
+  log.remove(a.summary.id);
+  assert.equal(new LandingLog(store).unreadList().length, 0);
+  // Landings logged before the unread list existed count as read.
+  store.remove(LandingLog.PREFIX + 'unread');
+  assert.equal(new LandingLog(store).isUnread('second'), false);
+});
+
+test('relative time: minutes, hours, then whole days', () => {
+  const now = 1e12;
+  const ago = (min: number) => fmtAgo(now - min * 60000, now);
+  assert.equal(ago(0.5), 'just now');
+  assert.equal(ago(-10), 'just now');
+  assert.equal(ago(1), '1 minute ago');
+  assert.equal(ago(59), '59 minutes ago');
+  assert.equal(ago(60), '1 hour ago');
+  assert.equal(ago(23 * 60 + 59), '23 hours ago');
+  assert.equal(ago(24 * 60), '1 day ago');
+  assert.equal(ago(24 * 60 * 9.5), '9 days ago');
 });
