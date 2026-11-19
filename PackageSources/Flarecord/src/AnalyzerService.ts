@@ -1,4 +1,5 @@
 import { EventBus, Subject } from '@microsoft/msfs-sdk';
+import { mark } from './boot.ts';
 import { LandingDetector } from './core/LandingDetector.ts';
 import type { LandingRecord, LandingSummary, Sample } from './core/types.ts';
 import { parseSettings, type Settings } from './core/units.ts';
@@ -73,10 +74,11 @@ export class AnalyzerService {
             if (wasExamples || !cur || !this.log.list().some((x) => x.id === cur.id)) this.selected.set(this.log.latest());
           }
           this.fileState.set(this.store.state);
+          mark(`file storage ${this.store.state}, ${this.store.startResult}`);
         })
-        .catch((e) => console.error('Flarecord: file storage failed to start', e));
+        .catch((e) => mark('file storage failed', e));
     } catch (e) {
-      console.error('Flarecord: file storage is not available', e);
+      mark('file storage not available', e);
     }
   }
 

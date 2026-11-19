@@ -7,7 +7,15 @@ import type { BusLike } from '../storage/FileBridge.ts';
  * VERIFY IN SIM: that the listener is available to EFB apps. If it is not, the app keeps working
  * on the DataStore alone and Settings says so.
  */
+let shared: BusLike | null | undefined;
+
+/** One listener for the whole app, created on first use. */
 export function simCommBus(): BusLike | null {
+  if (shared === undefined) shared = create();
+  return shared;
+}
+
+function create(): BusLike | null {
   const register = (window as any).RegisterViewListener;
   if (typeof register !== 'function') return null;
   let ready = false;

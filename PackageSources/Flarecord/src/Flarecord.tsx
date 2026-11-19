@@ -2,6 +2,7 @@
  * EFB app entry point. Structure follows the SDK's EFB TemplateApp sample
  * (<SDK>/Samples/DevmodeProjects/EFB/PackageSources/TemplateApp).
  */
+import { describe, mark } from './boot';
 import { App, AppBootMode, AppInstallProps, AppSuspendMode, AppView, AppViewProps, Efb, RequiredProps, TVNode, UiView, UiViewProps } from '@efb/efb-api';
 import { FSComponent, Subject, VNode } from '@microsoft/msfs-sdk';
 import { AnalyzerService } from './AnalyzerService';
@@ -15,11 +16,6 @@ import './Flarecord.scss';
 
 /** Set when the app could not start, so the tablet shows why instead of the app going missing. */
 let startError: string | null = null;
-
-function describe(e: unknown): string {
-  const err = e as { message?: string; stack?: string } | null;
-  return err && (err.stack || err.message) ? String(err.stack || err.message) : String(e);
-}
 
 class StartErrorPage extends UiView<UiViewProps> {
   public readonly tabName = 'Summary';
@@ -47,10 +43,25 @@ class FlarecordView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
     }
     const svc = AnalyzerService.instance;
     const go = (p: string) => this.go(p);
-    this.appViewService.registerPage('Landing', () => <LandingPage svc={svc} go={go} />);
-    this.appViewService.registerPage('Log', () => <LogPage svc={svc} go={go} />);
-    this.appViewService.registerPage('Summary', () => <SummaryPage svc={svc} go={go} />);
-    this.appViewService.registerPage('Settings', () => <SettingsPage svc={svc} go={go} />);
+    // A page that cannot be built shows the reason in its place.
+    const page = (name: string, make: () => any) => {
+      this.appViewService.registerPage(name, (): any => {
+        try {
+          const node = make();
+          mark(`page ${name} built`);
+          return node;
+        } catch (e) {
+          mark(`page ${name} failed`, e);
+          startError = describe(e);
+          return <StartErrorPage />;
+        }
+      });
+    };
+    page('Landing', () => <LandingPage svc={svc} go={go} />);
+    page('Log', () => <LogPage svc={svc} go={go} />);
+    page('Summary', () => <SummaryPage svc={svc} go={go} />);
+    page('Settings', () => <SettingsPage svc={svc} go={go} />);
+    mark('views registered');
   }
 
   /**
@@ -73,6 +84,7 @@ class FlarecordView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
   }
 
   public render(): VNode {
+    mark('view render');
     if (startError) return <div class="la-app"><div class="la-body">{super.render()}</div></div>;
     return (
       <div class="la-app">
@@ -110,18 +122,28 @@ class Flarecord extends App {
     Efb.loadCss(`${BASE_URL}/Flarecord.css`).catch(() => undefined);
     // Whatever goes wrong here, the app must still register, or it vanishes from the tablet
     // with nothing to say why.
+    mark('install');
     try {
       AnalyzerService.start(this.bus);
+      mark('service started');
     } catch (e) {
       startError = describe(e);
+      mark('service failed', e);
       console.error('Flarecord: could not start', e);
     }
     return super.install(props);
   }
 
   public render(): TVNode<FlarecordView> {
+    mark('app render');
     return <FlarecordView bus={this.bus} />;
   }
 }
 
-Efb.use(Flarecord);
+try {
+  Efb.use(Flarecord);
+  mark('registered with the EFB');
+} catch (e) {
+  mark('EFB registration failed', e);
+  throw e;
+}
