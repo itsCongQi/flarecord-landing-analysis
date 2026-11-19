@@ -6,21 +6,24 @@ import { App, AppBootMode, AppInstallProps, AppSuspendMode, AppView, AppViewProp
 import { FSComponent, Subject, VNode } from '@microsoft/msfs-sdk';
 import { AnalyzerService } from './AnalyzerService';
 import { AnalysisPage } from './ui/pages/AnalysisPage';
-import { HistoryPage } from './ui/pages/HistoryPage';
-import { LatestPage } from './ui/pages/LatestPage';
+import { LogPage } from './ui/pages/LogPage';
+import { SettingsPage } from './ui/pages/SettingsPage';
+import { TouchdownPage } from './ui/pages/TouchdownPage';
 import { TabBar } from './ui/components/TabBar';
 
 import './LandingAnalyzer.scss';
 
 class LandingAnalyzerView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
-  protected defaultView = 'Latest';
-  private readonly activePage = Subject.create('Latest');
+  protected defaultView = 'Touchdown';
+  private readonly activePage = Subject.create('Touchdown');
 
   protected registerViews(): void {
     const svc = AnalyzerService.instance;
-    this.appViewService.registerPage('Latest', () => <LatestPage svc={svc} go={(p) => this.go(p)} />);
-    this.appViewService.registerPage('Analysis', () => <AnalysisPage svc={svc} />);
-    this.appViewService.registerPage('History', () => <HistoryPage svc={svc} go={(p) => this.go(p)} />);
+    const go = (p: string) => this.go(p);
+    this.appViewService.registerPage('Touchdown', () => <TouchdownPage svc={svc} go={go} />);
+    this.appViewService.registerPage('Analysis', () => <AnalysisPage svc={svc} go={go} />);
+    this.appViewService.registerPage('Log', () => <LogPage svc={svc} go={go} />);
+    this.appViewService.registerPage('Settings', () => <SettingsPage svc={svc} go={go} />);
   }
 
   /**

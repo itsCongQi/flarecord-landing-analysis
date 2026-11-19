@@ -86,17 +86,16 @@ export class LandingLog {
     this.writeIndex();
   }
 
-  /** Personal bests and averages for the history page. */
-  stats(): { count: number; avgVs: number; bestScore: number; avgScore: number; softest: number } | null {
+  /** Medians over the logged landings (touch-and-goes excluded) for the Log page. */
+  stats(): { count: number; medianVs: number; medianTdM: number | null; medianClM: number | null } | null {
     const xs = this.list().filter((s) => !s.touchAndGo);
     if (xs.length === 0) return null;
-    const avg = (f: (s: LandingSummary) => number) => Math.round(xs.reduce((a, s) => a + f(s), 0) / xs.length);
+    const geo = xs.filter((s) => s.geometry);
     return {
       count: xs.length,
-      avgVs: avg((s) => s.touchdownVsFpm),
-      avgScore: avg((s) => s.score.total),
-      bestScore: Math.max(...xs.map((s) => s.score.total)),
-      softest: Math.max(...xs.map((s) => s.touchdownVsFpm)),
+      medianVs: median(xs.map((s) => s.touchdownVsFpm)),
+      medianTdM: geo.length ? median(geo.map((s) => s.geometry!.distFromThresholdM)) : null,
+      medianClM: geo.length ? median(geo.map((s) => Math.abs(s.geometry!.centerlineOffsetM))) : null,
     };
   }
 
@@ -161,6 +160,12 @@ export class LandingLog {
     this.store.set(LandingLog.PREFIX + 'index.pages', String(pages));
     this.listeners.forEach((fn) => fn());
   }
+}
+
+function median(xs: number[]): number {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
 /** In-memory store for tests and for running the UI outside the sim. */

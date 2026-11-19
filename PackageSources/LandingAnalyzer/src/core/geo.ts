@@ -59,7 +59,7 @@ export function matchRunway(
   for (const rw of candidates) {
     if (Math.abs(angleDiff(rw.headingTrue, trackDeg)) > 30) continue;
     const { along, cross } = runwayRelative(rw, lat, lon);
-    if (along < -300 || along > rw.lengthM) continue;
+    if (along < -300 - (rw.displacedM ?? 0) || along > rw.lengthM) continue;
     if (Math.abs(cross) > Math.max(rw.widthM * 1.5, 45)) continue;
     if (Math.abs(cross) < bestCross) {
       bestCross = Math.abs(cross);

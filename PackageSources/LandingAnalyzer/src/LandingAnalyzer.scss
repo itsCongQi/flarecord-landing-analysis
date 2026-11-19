@@ -1,89 +1,114 @@
-// Dark, high-contrast cockpit palette. Values mirror the browser mockup (docs/mockup.html).
+// Instrument-style dark palette: near-black background, hairline panels, one accent colour.
 //
 // The EFB renders with Coherent Gameface, not a full browser: no CSS grid, no `inset`, no flex
-// `gap`. Layout below is flexbox with margins only, and the root fills the AppView like the SDK's
-// TemplateApp sample (position: relative; width/height 100%).
-$bg: #0f1419;
-$panel: #182029;
-$line: #26313d;
-$text: #e6edf3;
-$muted: #8b98a5;
-$accent: #4cc9f0;
+// `gap`. Layout below is flexbox with margins and fixed or percentage widths only, and the root
+// fills the AppView like the SDK's TemplateApp sample (position: relative; width/height 100%).
+$bg: #0b0d10;
+$panel: #12161b;
+$line: #1f262e;
+$line2: #2a323c;
+$raised: #1a2027;
+$text: #e8ecf0;
+$soft: #b8c0cc;
+$muted: #8a94a0;
+$accent: #5ab0ff;
+$flare: #e3b341;
+$ok: #3fb950;
 
-.la-app { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; background-color: $bg; color: $text; font-size: 18px; }
-// Two rows: tabs (between the EFB's own bell at the left and clock at the right), then the live strip.
-.la-topbar { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-start; padding: 10px 18px 8px 90px; border-bottom: 1px solid $line; }
-.la-tabs { display: flex; flex-direction: row; }
-.la-tab { background-color: transparent; color: $muted; border: 0; padding: 10px 18px; margin-right: 6px; border-radius: 10px; font-size: 18px; &:hover { color: $text; background-color: $panel; } &.on { color: $text; background-color: $line; } }
-.la-live { display: flex; flex-direction: row; align-items: center; margin: 6px 0 0 18px; color: $muted; font-size: 15px; }
-.la-status { color: $accent; margin-right: 16px; }
+.la-app { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; background-color: $bg; color: $text; font-size: 17px; }
+
+// Tabs sit between the EFB's own bell (top left) and clock (top right); the status strip is below.
+.la-topbar { flex-shrink: 0; display: flex; flex-direction: column; }
+.la-tabs { display: flex; flex-direction: row; height: 62px; padding: 0 150px 0 110px; border-bottom: 1px solid $line; }
+.la-tab { background-color: transparent; color: $muted; border: 0; border-bottom: 2px solid transparent; padding: 0 22px; margin-right: 4px; font-size: 18px; font-weight: 500; &:hover { color: $text; } &.on { color: $text; border-bottom-color: $accent; } }
+.la-strip { display: flex; flex-direction: row; align-items: center; height: 38px; padding: 0 28px; border-bottom: 1px solid $line; color: $muted; font-size: 14px; }
+.la-dot { width: 8px; height: 8px; border-radius: 4px; margin-right: 10px; background-color: $ok; &.live { background-color: $flare; } }
+.la-status { color: $text; margin-right: 26px; letter-spacing: 1px; }
+.la-live { margin-right: 26px; min-width: 96px; }
+.la-strip-note { margin-left: auto; }
+
 .la-body { position: relative; flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-height: 0; overflow: hidden; }
 // AppViewService puts each page in a .ui-view wrapper inside an .app-container: make both fill.
 .la-body .app-container, .la-body .ui-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 .la-body .ui-view.hidden { display: none; }
 // Extra bottom padding keeps the last content above the EFB's own bottom bar.
-.la-page { width: 100%; height: 100%; overflow-y: scroll; padding: 16px 18px 90px; box-sizing: border-box; }
-.la-empty { text-align: center; color: $muted; margin-top: 120px; }
-.la-example-note { background-color: $panel; border: 1px dashed $muted; color: $muted; padding: 8px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 15px; }
+.la-page { width: 100%; height: 100%; overflow-y: scroll; padding: 22px 28px 110px; box-sizing: border-box; }
+.la-empty { text-align: center; color: $muted; margin-top: 140px; }
+.la-example-note { border: 1px solid $line2; color: $muted; padding: 9px 16px; border-radius: 4px; margin-bottom: 16px; font-size: 14px; }
 
-.la-hero { display: flex; flex-direction: row; align-items: center; margin-bottom: 16px; }
-.la-score { flex-shrink: 0; width: 120px; height: 120px; margin-right: 22px; border-radius: 50%; border: 8px solid; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.la-score-num { font-size: 44px; font-weight: 700; color: $text; }
-.la-score-grade { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
-// The score ring takes its border colour from the grade class.
-.la-grade-excellent { color: #4ade80; border-color: #4ade80; }
-.la-grade-good { color: #a3e635; border-color: #a3e635; }
-.la-grade-acceptable { color: #facc15; border-color: #facc15; }
-.la-grade-firm { color: #fb923c; border-color: #fb923c; }
-.la-grade-hard { color: #f87171; border-color: #f87171; }
-.la-hero-text { flex-grow: 1; flex-shrink: 1; }
-.la-where { font-size: 26px; font-weight: 700; }
-.la-when { color: $muted; margin: 4px 0 10px; }
-.la-tip { background-color: $panel; border-left: 4px solid $accent; padding: 10px 14px; border-radius: 6px; }
+// Shared pieces.
+.la-label { font-size: 13px; font-weight: 600; letter-spacing: 1.2px; color: $muted; }
+.la-note { font-size: 14px; color: $muted; }
+.la-title { font-size: 30px; font-weight: 600; span { font-size: 16px; font-weight: 500; color: $muted; margin: 0 2px; } }
+.la-sub { margin-top: 5px; font-size: 15px; color: $muted; }
+.la-head { display: flex; flex-direction: row; justify-content: space-between; align-items: flex-end; margin-bottom: 18px; }
+.la-head-main { flex-shrink: 1; min-width: 0; }
+.la-head-actions { flex-shrink: 0; display: flex; flex-direction: row; align-items: center; }
+.la-head-actions > * { margin-left: 12px; }
+.la-index { font-size: 14px; letter-spacing: 1px; color: $muted; border: 1px solid $line2; border-radius: 4px; padding: 12px 14px; }
+.la-btn { background-color: transparent; color: $text; border: 1px solid $line2; border-radius: 4px; padding: 13px 18px; font-size: 15px; &:hover { background-color: $raised; } &.la-btn-off { color: #4a535e; } }
+.la-panel { background-color: $panel; border: 1px solid $line; border-radius: 6px; margin-bottom: 18px; }
+.la-panel-head { display: flex; flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.la-panel-empty { color: $muted; font-size: 15px; padding: 26px 20px; }
 
-// Three tiles per row: 32% width plus 2% right margin (none on every third tile).
-.la-tiles { display: flex; flex-direction: row; flex-wrap: wrap; margin-bottom: 6px; }
-.la-tile { width: 32%; margin: 0 2% 10px 0; box-sizing: border-box; background-color: $panel; border-radius: 12px; padding: 12px 14px; &:nth-child(3n) { margin-right: 0; } }
-.la-tile-label { color: $muted; font-size: 14px; }
-.la-tile-value { font-size: 26px; font-weight: 700; margin: 2px 0; }
-.la-tile-sub { color: $muted; font-size: 14px; }
+// Segmented switch.
+.la-seg { display: flex; flex-direction: row; border: 1px solid $line2; border-radius: 4px; }
+.la-seg-btn { background-color: transparent; color: $muted; border: 0; border-right: 1px solid $line2; padding: 13px 18px; font-size: 15px; &:last-child { border-right: 0; } &.on { background-color: $raised; color: $text; } }
+.la-seg-wide { min-width: 96px; }
 
-.la-bar-row { display: flex; flex-direction: row; align-items: center; padding: 5px 0; }
-.la-bar-label { width: 150px; flex-shrink: 0; margin-right: 10px; }
-.la-bar { flex-grow: 1; flex-shrink: 1; height: 10px; margin-right: 10px; background-color: $line; border-radius: 5px; overflow: hidden; }
-.la-bar-fill { display: block; height: 100%; background-color: $accent; }
-.la-bar-val { width: 70px; flex-shrink: 0; margin-right: 10px; }
-.la-bar-note { width: 220px; flex-shrink: 0; }
-.la-bar-note, .la-bar-val { color: $muted; font-size: 14px; }
-.la-btn { margin-top: 14px; background-color: $accent; color: #001018; border: 0; padding: 12px 20px; border-radius: 10px; font-weight: 700; font-size: 18px; }
-.la-actions { display: flex; flex-direction: row; align-items: center; margin-bottom: 70px; }
-.la-actions .la-btn { margin-right: 12px; }
-.la-btn-danger { background-color: transparent; color: #f87171; border: 1px solid #f87171; }
+// Legend keys.
+.la-key { display: flex; flex-direction: row; align-items: center; font-size: 14px; color: $muted; margin-right: 22px; }
+.la-key i { display: block; width: 22px; height: 0; margin-right: 8px; border-top: 2px solid $accent; }
+.la-key .la-key-dash { border-top-style: dashed; }
+.la-key .la-key-line { opacity: 0.6; }
+.la-key .la-key-line2 { border-top-color: $muted; }
+.la-key .la-key-flare { width: 0; height: 16px; border-top: 0; border-left: 2px dashed $flare; }
+.la-key .la-key-td { width: 0; height: 16px; border-top: 0; border-left: 2px dashed $text; }
+.la-legend { display: flex; flex-direction: row; align-items: center; margin-top: 4px; }
+.la-legend-note { margin-left: auto; font-size: 14px; color: $soft; }
 
-.la-an-head { display: flex; flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.la-seg { display: flex; flex-direction: row; background-color: $panel; border-radius: 10px; padding: 3px; }
-.la-seg-btn { background-color: transparent; color: $muted; border: 0; padding: 6px 14px; border-radius: 8px; font-size: 16px; &.on { background-color: $line; color: $text; } }
-.la-chart-box { background-color: $panel; border-radius: 12px; padding: 8px 10px; margin-bottom: 10px; }
-.la-chart-title { color: $muted; font-size: 14px; margin: 0 0 2px 4px; }
-.la-chart { width: 100%; }
+// Value cells: a panel divided by hairlines, six per row (five or four with a modifier).
+.la-cells { display: flex; flex-direction: row; flex-wrap: wrap; overflow: hidden; }
+.la-cell { width: 16.666%; box-sizing: border-box; padding: 14px 18px; border-right: 1px solid $line; border-bottom: 1px solid $line; margin-bottom: -1px; }
+.la-cell .la-label { white-space: nowrap; overflow: hidden; }
+.la-cells-5 .la-cell { width: 20%; }
+.la-cells-4 .la-cell { width: 25%; }
+.la-value { margin-top: 5px; font-size: 26px; font-weight: 500; white-space: nowrap; span { font-size: 14px; font-weight: 400; color: $muted; } }
+
+// Runway drawings.
+.la-rw-panel { padding: 14px 20px 12px; }
+.la-rw { display: block; }
+.la-rw-label { font-size: 11px; fill: $muted; }
+.la-rw-call { font-size: 12px; font-weight: 600; letter-spacing: 0.6px; }
+.la-rw-num { font-size: 26px; font-weight: 600; }
+
+// Graphs.
+.la-chart-box { padding: 12px 20px 8px; margin-bottom: 12px; }
+.la-chart-box .la-key { margin: 0 0 0 22px; }
+.la-chart-box .la-panel-head > span { display: flex; flex-direction: row; }
+.la-chart { display: block; }
 .la-grid { stroke: $line; stroke-width: 1; }
-.la-axis, .la-unit { fill: $muted; font-size: 11px; }
+.la-axis { fill: $muted; font-size: 11px; }
 .la-guide { stroke: $muted; stroke-dasharray: 2 4; }
 .la-guide-label { fill: $muted; font-size: 10px; }
-.la-marker { font-size: 11px; font-weight: 700; }
-// Two facts per row.
-.la-flare-facts { display: flex; flex-direction: row; flex-wrap: wrap; }
-.la-fact { width: 49%; margin: 0 2% 8px 0; box-sizing: border-box; background-color: $panel; border-radius: 10px; padding: 8px 12px; display: flex; flex-direction: row; justify-content: space-between; &:nth-child(2n) { margin-right: 0; } span { color: $muted; } }
+.la-marker { font-size: 11px; font-weight: 600; }
 
-// Four stats per row.
-.la-stats { display: flex; flex-direction: row; margin-bottom: 10px; }
-.la-stat { width: 23.5%; margin-right: 2%; box-sizing: border-box; background-color: $panel; border-radius: 12px; padding: 10px 14px; &:last-child { margin-right: 0; } span { display: block; color: $muted; font-size: 14px; } b { font-size: 26px; } }
-.la-search { width: 100%; box-sizing: border-box; background-color: $panel; border: 1px solid $line; color: $text; border-radius: 10px; padding: 10px 12px; font-size: 16px; margin: 6px 0 10px; }
-.la-row { display: flex; flex-direction: row; align-items: center; padding: 10px; border-bottom: 1px solid $line; &:hover { background-color: $panel; } }
-.la-row-score { width: 56px; flex-shrink: 0; margin-right: 10px; font-size: 22px; font-weight: 700; text-align: center; }
-.la-row-main { flex-grow: 1; flex-shrink: 1; margin-right: 10px; }
-.la-row-main small { display: block; color: $muted; }
-.la-row-num { flex-shrink: 0; margin-left: 10px; color: $muted; text-align: right; }
-.la-row-num:nth-of-type(3) { width: 110px; }
-.la-row-num:nth-of-type(4) { width: 80px; }
-.la-row-num:nth-of-type(5) { width: 100px; }
+// Log table: fixed-width columns, the aircraft column takes the rest.
+.la-search { width: 260px; box-sizing: border-box; background-color: $panel; border: 1px solid $line2; color: $text; border-radius: 4px; padding: 12px 14px; font-size: 15px; }
+.la-table { overflow: hidden; }
+.la-row { display: flex; flex-direction: row; align-items: center; min-height: 50px; padding: 0 18px; border-bottom: 1px solid $line; font-size: 15px; margin-bottom: -1px; &:hover { background-color: $raised; } }
+.la-row-head { min-height: 42px; font-size: 12px; font-weight: 600; letter-spacing: 1px; color: $muted; &:hover { background-color: transparent; } }
+.la-col { flex-shrink: 0; box-sizing: border-box; padding-right: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-col-date { width: 13%; color: $muted; }
+.la-col-rwy { width: 12%; font-weight: 500; }
+.la-col-ac { flex-grow: 1; flex-shrink: 1; width: 0; color: $soft; }
+.la-col-n0 { width: 8%; text-align: right; }
+.la-col-n1 { width: 10.5%; text-align: right; }
+.la-row-head .la-col { color: $muted; font-weight: 600; }
+
+// Settings.
+.la-set-head { padding: 14px 20px; border-bottom: 1px solid $line; }
+.la-set-row { display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid $line; &:last-child { border-bottom: 0; } }
+.la-set-text { flex-shrink: 1; min-width: 0; padding-right: 20px; }
+.la-set-title { font-size: 17px; font-weight: 500; margin-bottom: 3px; }
+.la-set-foot { margin-top: 2px; }

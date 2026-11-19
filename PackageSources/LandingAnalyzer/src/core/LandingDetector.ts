@@ -201,6 +201,8 @@ export class LandingDetector {
         crabDeg: round1(crab),
         headwindKt: round1(wind.head),
         crosswindKt: round1(wind.cross),
+        windDirDeg: Math.round(contact.windDir),
+        windKt: Math.round(contact.windSpd),
         bounces,
         touchAndGo,
         flare,
@@ -218,7 +220,7 @@ function round1(x: number): number {
 
 /** Resample to a fixed 5 Hz grid from 30 s before contact to the end of the rollout (max 25 s). */
 export function buildTrace(samples: Sample[], contactT: number, runway: RunwayEnd | null): LandingTrace {
-  const tr: LandingTrace = { t: [], agl: [], vs: [], pitch: [], ias: [], elevator: [], g: [], centerline: [] };
+  const tr: LandingTrace = { t: [], agl: [], vs: [], pitch: [], ias: [], elevator: [], g: [], centerline: [], along: [] };
   const endT = Math.min(samples[samples.length - 1].t, contactT + TRACE_AFTER_MAX_S);
   let j = 0;
   for (let t = Math.max(samples[0].t, contactT - TRACE_BEFORE_S); t <= endT + 1e-6; t += TRACE_STEP_S) {
@@ -231,7 +233,10 @@ export function buildTrace(samples: Sample[], contactT: number, runway: RunwayEn
     tr.ias.push(Math.round(s.ias));
     tr.elevator.push(Math.round(s.elevator * 100) / 100);
     tr.g.push(Math.round(s.g * 100) / 100);
-    tr.centerline.push(runway && s.onGround ? round1(runwayRelative(runway, s.lat, s.lon).cross) : null);
+    // The whole ground track relative to the runway, approach included, for the runway view.
+    const rel = runway ? runwayRelative(runway, s.lat, s.lon) : null;
+    tr.centerline.push(rel ? round1(rel.cross) : null);
+    tr.along!.push(rel ? Math.round(rel.along) : null);
   }
   return tr;
 }

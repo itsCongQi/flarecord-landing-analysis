@@ -26,6 +26,8 @@ export interface ChartOptions {
   /** Force the y-range (otherwise fitted to the data with 8% padding). */
   yMin?: number;
   yMax?: number;
+  /** Rendered width in CSS pixels; the height follows the aspect ratio. Defaults to `width`. */
+  pxWidth?: number;
   /** Draw the seconds-to-touchdown axis labels (default true). */
   timeAxis?: boolean;
 }
@@ -52,26 +54,28 @@ export function chartSvg(o: ChartOptions): string {
     if (o.yMin === undefined) lo -= 1;
     if (hi - lo < 1e-6) hi = lo + 1;
   }
-  if (o.yMin === undefined) lo -= (hi - lo) * 0.08;
-  if (o.yMax === undefined) hi += (hi - lo) * 0.08;
+  // Round the range out to whole steps so the axis reads in plain numbers (0, 50, 100 ...).
+  const step = niceStep(hi - lo, 4);
+  if (o.yMin === undefined) lo = Math.floor(lo / step + 1e-9) * step;
+  if (o.yMax === undefined) hi = Math.ceil(hi / step - 1e-9) * step;
+  const digits = step >= 1 ? 0 : step >= 0.1 ? 1 : 2;
 
   const x = (t: number) => padL + ((t - t0) / (t1 - t0)) * w;
   const y = (v: number) => padT + (1 - (v - lo) / (hi - lo)) * h;
 
   const parts: string[] = [];
-  parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${o.width} ${o.height}" width="${o.width}" height="${o.height}" class="la-chart">`);
+  parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${o.width} ${o.height}" width="${Math.round(o.pxWidth ?? o.width)}" height="${Math.round(((o.pxWidth ?? o.width) * o.height) / o.width)}" class="la-chart">`);
 
-  // Grid: 4 horizontal lines with labels, vertical line every 5 s.
-  for (let i = 0; i <= 4; i++) {
-    const v = lo + ((hi - lo) * i) / 4;
+  // Grid: a horizontal line per step with its value, a vertical line every 5 s.
+  for (let v = lo; v <= hi + step * 1e-6; v += step) {
     const yy = y(v).toFixed(1);
     parts.push(`<line x1="${padL}" x2="${padL + w}" y1="${yy}" y2="${yy}" class="la-grid"/>`);
-    parts.push(`<text x="${padL - 6}" y="${yy}" class="la-axis" text-anchor="end" dominant-baseline="middle">${fmt(v)}</text>`);
+    parts.push(`<text x="${padL - 6}" y="${yy}" class="la-axis" text-anchor="end" dominant-baseline="middle">${(Math.abs(v) < step * 1e-6 ? 0 : v).toFixed(digits)}</text>`);
   }
   for (let t = Math.ceil(t0 / 5) * 5; o.timeAxis !== false && t <= t1; t += 5) {
     const xx = x(t).toFixed(1);
     parts.push(`<line x1="${xx}" x2="${xx}" y1="${padT}" y2="${padT + h}" class="la-grid"/>`);
-    parts.push(`<text x="${xx}" y="${padT + h + 14}" class="la-axis" text-anchor="middle">${t === 0 ? 'TD' : t + 's'}</text>`);
+    parts.push(`<text x="${xx}" y="${padT + h + 14}" class="la-axis" text-anchor="middle">${t === 0 ? 'TD' : t}</text>`);
   }
 
   for (const g of o.guides ?? []) {
@@ -101,12 +105,14 @@ export function chartSvg(o: ChartOptions): string {
     parts.push(`<text x="${xx}" y="${padT - 5}" fill="${m.color}" class="la-marker" text-anchor="middle">${m.label}</text>`);
   }
 
-  parts.push(`<text x="4" y="12" class="la-unit">${o.unit}</text>`);
   parts.push('</svg>');
   return parts.join('');
 }
 
-function fmt(v: number): string {
-  const a = Math.abs(v);
-  return a >= 100 ? v.toFixed(0) : a >= 10 ? v.toFixed(0) : v.toFixed(1);
+/** A step of 1, 2, 2.5 or 5 times a power of ten that splits the range into about `n` parts. */
+function niceStep(range: number, n: number): number {
+  const raw = range / n;
+  const mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+  const f = raw / mag;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * mag;
 }
