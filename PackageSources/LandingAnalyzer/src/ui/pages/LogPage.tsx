@@ -1,10 +1,8 @@
 import type { LandingSummary } from '../../core/types';
-import { group } from '../../core/units';
-import { dispersionStrip } from '../components/runwaySvg';
 import { esc, fmtWhen, sided, where } from '../format';
 import { EXAMPLE_NOTE, PageBase } from './PageBase';
 
-/** Log: every recorded landing as a table, medians, and the touchdown points overlaid on a runway. */
+/** Log: every recorded landing as a table. A row opens that landing; figures across landings are on Summary. */
 export class LogPage extends PageBase {
   public readonly tabName = 'Log';
   protected readonly pageClass = 'la-log';
@@ -15,11 +13,7 @@ export class LogPage extends PageBase {
     const u = this.units;
     const all = log.list();
     const rows = this.filter ? all.filter((s) => (s.aircraft + ' ' + where(s)).toLowerCase().includes(this.filter)) : all;
-    const st = log.stats();
-    const strip = dispersionStrip(all.slice(0, 30), u, this.drawingWidth(98));
-    const shown = Math.min(30, all.filter((s) => s.geometry).length);
 
-    const stat = (label: string, value: string, unit = '') => `<div class="la-cell"><div class="la-label">${label}</div><div class="la-value">${value}${unit ? ` <span>${unit}</span>` : ''}</div></div>`;
     const num = (cls: string, text: string) => `<span class="la-col ${cls}">${text}</span>`;
     const row = (s: LandingSummary) => {
       const g = s.geometry;
@@ -41,19 +35,12 @@ export class LogPage extends PageBase {
     el.innerHTML = `
       ${log.showingExamples ? EXAMPLE_NOTE : ''}
       <div class="la-head">
-        <div class="la-head-main"><div class="la-title">Landing log</div></div>
+        <div class="la-head-main"><div class="la-title">Landing log</div><div class="la-sub">${rows.length} of ${all.length} landing${all.length === 1 ? '' : 's'} · tap a row to open it</div></div>
         <div class="la-head-actions">
           <span class="la-label">FILTER</span>
           <input class="la-search" placeholder="Aircraft or airport" value="${esc(this.filter)}"/>
         </div>
       </div>
-      <div class="la-panel la-cells la-cells-4">
-        ${stat('LANDINGS', String(st?.count ?? 0))}
-        ${stat('MEDIAN VERTICAL SPEED', st ? u.fmtVs(st.medianVs) : 'n/a', st ? u.vsUnit : '')}
-        ${stat('MEDIAN TOUCHDOWN POINT', st && st.medianTdM !== null ? u.fmtDist(st.medianTdM) : 'n/a', st && st.medianTdM !== null ? `${u.distUnit} from threshold` : '')}
-        ${stat('MEDIAN CENTRELINE OFFSET', st && st.medianClM !== null ? group(u.dist(st.medianClM)) : 'n/a', st && st.medianClM !== null ? u.distUnit : '')}
-      </div>
-      ${strip ? `<div class="la-panel la-rw-panel"><div class="la-panel-head"><span class="la-label">TOUCHDOWN DISPERSION · LAST ${shown} LANDING${shown === 1 ? '' : 'S'} WITH A RUNWAY, ALL RUNWAYS OVERLAID</span></div>${strip}</div>` : ''}
       <div class="la-panel la-table">
         <div class="la-row la-row-head">
           <span class="la-col la-col-date">DATE</span><span class="la-col la-col-rwy">RUNWAY</span><span class="la-col la-col-ac">AIRCRAFT</span>

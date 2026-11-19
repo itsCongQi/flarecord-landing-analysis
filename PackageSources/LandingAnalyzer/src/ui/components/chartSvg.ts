@@ -136,9 +136,14 @@ export interface StackOptions {
   /** Time of the read-out cursor, or null for none. */
   cursorT: number | null;
   pxWidth: number;
+  /**
+   * The x values are positions in a sequence (landing 1, 2, 3 ...) rather than seconds: label
+   * the axis with whole numbers and draw a dot for every value.
+   */
+  sequence?: boolean;
 }
 
-const STACK = { width: 1080, padL: 44, padR: 86, padT: 26, lane: 92, gap: 26, padB: 24 };
+const STACK = { width: 1080, padL: 44, padR: 86, padT: 40, lane: 92, gap: 28, padB: 24 };
 
 /** Height of the stacked chart's viewBox for a number of lanes. */
 function stackHeight(lanes: number): number {
@@ -171,11 +176,12 @@ export function stackSvg(o: StackOptions): string {
   const p: string[] = [];
   p.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${Math.round(o.pxWidth)}" height="${Math.round((o.pxWidth * height) / width)}" class="la-chart la-stack">`);
 
-  // Shared time grid.
-  for (let t = Math.ceil(t0 / 5) * 5; t <= t1; t += 5) {
+  // Shared grid: every 5 s, or whole sequence numbers.
+  const xStep = o.sequence ? Math.max(1, Math.round(niceStep(t1 - t0, 10))) : 5;
+  for (let t = Math.ceil(t0 / xStep) * xStep; t <= t1 + 1e-9; t += xStep) {
     const xx = x(t).toFixed(1);
     p.push(`<line x1="${xx}" x2="${xx}" y1="${padT}" y2="${bottom}" class="la-grid"/>`);
-    p.push(`<text x="${xx}" y="${bottom + 15}" class="la-axis" text-anchor="middle">${t === 0 ? 'TD' : t}</text>`);
+    p.push(`<text x="${xx}" y="${bottom + 15}" class="la-axis" text-anchor="middle">${!o.sequence && t === 0 ? 'TD' : t}</text>`);
   }
 
   const cursor = o.cursorT !== null && o.cursorT >= t0 && o.cursorT <= t1 ? o.cursorT : null;
@@ -201,7 +207,7 @@ export function stackSvg(o: StackOptions): string {
       p.push(`<line x1="${padL}" x2="${padL + w}" y1="${yy}" y2="${yy}" class="la-grid"/>`);
       p.push(`<text x="${padL - 6}" y="${yy}" class="la-axis" text-anchor="end" dominant-baseline="middle">${(Math.abs(v) < step * 1e-6 ? 0 : v).toFixed(digits)}</text>`);
     }
-    p.push(`<text x="${padL + 8}" y="${top + 15}" class="la-lane-label">${ln.label}</text>`);
+    p.push(`<text x="${padL}" y="${top - 8}" class="la-lane-label">${ln.label}</text>`);
 
     let d = '';
     let pen = false;
@@ -214,6 +220,11 @@ export function stackSvg(o: StackOptions): string {
       pen = true;
     });
     p.push(`<path d="${d}" fill="none" stroke="${ln.color}" stroke-width="2" stroke-linejoin="round"/>`);
+    if (o.sequence) {
+      ln.values.forEach((v, i) => {
+        if (v !== null) p.push(`<circle cx="${x(o.t[i]).toFixed(1)}" cy="${y(v).toFixed(1)}" r="3" fill="${ln.color}"/>`);
+      });
+    }
 
     if (cursor !== null) {
       const a = ln.values[ci];
@@ -230,8 +241,8 @@ export function stackSvg(o: StackOptions): string {
   for (const g of o.gates ?? []) {
     if (g.t < t0 || g.t > t1) continue;
     const xx = x(g.t).toFixed(1);
-    p.push(`<line x1="${xx}" x2="${xx}" y1="${padT}" y2="${bottom}" class="la-gate"/>`);
-    p.push(`<text x="${xx}" y="${padT - 8}" class="la-gate-label" text-anchor="middle">${g.label}</text>`);
+    p.push(`<line x1="${xx}" x2="${xx}" y1="${padT - 20}" y2="${bottom}" class="la-gate"/>`);
+    p.push(`<text x="${xx}" y="${padT - 26}" class="la-gate-label" text-anchor="middle">${g.label}</text>`);
   }
   for (const m of o.markers ?? []) {
     if (m.t < t0 || m.t > t1) continue;
