@@ -34,6 +34,8 @@ grades and no coaching.
 - **Summary across landings.** Medians, touchdown points overlaid on one runway, and a
   landing-by-landing trend, for all aircraft or the ones you tick.
 - **Your units.** Feet or metres, fpm or m/s, knots or km/h.
+- **Methods on show.** A "?" next to a figure explains how it was obtained, and Settings lists the
+  full methodology.
 
 ## Screens
 

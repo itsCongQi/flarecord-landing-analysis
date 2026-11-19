@@ -98,7 +98,14 @@ export interface LandingSummary {
   /** Wall-clock time (ms since epoch) when the landing was recorded. */
   recordedAt: number;
   aircraft: string;
+  /** Sink rate at first contact, fpm (negative = down). See vsSource for where it came from. */
   touchdownVsFpm: number;
+  /** Average sink rate over the last 0.5 s before contact (fitted to height), fpm. Absent on older landings. */
+  avgVsFpm?: number | null;
+  /** Source of touchdownVsFpm: the sim's touchdown value, the 0.5 s fit, or one vertical speed sample. */
+  vsSource?: 'sim' | 'fit' | 'sample';
+  /** Height reading with the wheels on the ground that was subtracted from every height, feet. */
+  aglOffsetFt?: number;
   peakG: number;
   touchdownIasKt: number;
   touchdownGsKt: number;

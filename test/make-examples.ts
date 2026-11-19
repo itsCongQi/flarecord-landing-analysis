@@ -27,7 +27,7 @@ async function main(): Promise<void> {
     const { aircraft, sc } = SCENARIOS[i];
     const recs: LandingRecord[] = [];
     const det = new LandingDetector({
-      findRunways: async () => [{ ...RUNWAY, airportIdent: 'DEMO' }],
+      findRunways: async () => [{ ...RUNWAY, airportIdent: 'DEMO', hard: true, ils: true }],
       onLanding: (r) => recs.push(r),
       aircraftName: () => aircraft,
       now: () => END - i * 86_400_000,

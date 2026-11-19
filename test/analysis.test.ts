@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { LandingDetector } from '../PackageSources/Flarecord/src/core/LandingDetector.ts';
+import { LandingDetector, fitSinkRate, groundOffset } from '../PackageSources/Flarecord/src/core/LandingDetector.ts';
+import { METHODS, method } from '../PackageSources/Flarecord/src/ui/methods.ts';
 import { runwayRelative, windComponents, matchRunway } from '../PackageSources/Flarecord/src/core/geo.ts';
 import { LandingLog, MemoryStore } from '../PackageSources/Flarecord/src/storage/LandingLog.ts';
 import type { LandingRecord } from '../PackageSources/Flarecord/src/core/types.ts';
@@ -403,4 +404,67 @@ test('a log saved under the earlier name is moved over on first start', async ()
   // A second start changes nothing, and a log already under the new name is never overwritten.
   store.set(old + 'index.pages', '0');
   assert.equal(new LandingLog(store).list().length, 1);
+});
+
+test('touchdown rate: sim value first, half-second fit as the cross-check and the fallback', async () => {
+  // A steady 3 ft/s descent sampled at 20 Hz fits to -180 fpm whatever the height offset.
+  const mk = (off: number) => Array.from({ length: 21 }, (_, i) => ({ t: i * 0.05, agl: off + Math.max(0, 3 * (1 - i * 0.05)), onGround: i === 20 }) as any);
+  assert.ok(Math.abs(fitSinkRate(mk(0), 20)! + 180) < 0.5);
+  assert.ok(Math.abs(fitSinkRate(mk(4), 20)! + 180) < 0.5);
+  assert.equal(fitSinkRate(mk(0).slice(18), 2), null, 'too few samples to fit');
+
+  // Without a sim value the fit is the headline figure and says so.
+  const [noSim] = await run();
+  assert.equal(noSim.summary.vsSource, 'fit');
+  assert.equal(noSim.summary.touchdownVsFpm, noSim.summary.avgVsFpm);
+
+  // With a sim value that one leads and the fit is kept next to it.
+  const out: LandingRecord[] = [];
+  const det = new LandingDetector({ onLanding: (r) => out.push(r), simTouchdownVs: () => -265 });
+  for (const s of simulate()) det.push(s);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(out[0].summary.vsSource, 'sim');
+  assert.equal(out[0].summary.touchdownVsFpm, -265);
+  assert.equal(out[0].summary.avgVsFpm, noSim.summary.avgVsFpm);
+});
+
+test('height is zeroed per aircraft from the rollout', async () => {
+  const [plain] = await run();
+  // The same landing in an aircraft whose height reads 3.2 ft with the wheels on the ground.
+  const out: LandingRecord[] = [];
+  const det = new LandingDetector({ onLanding: (r) => out.push(r) });
+  for (const s of simulate()) det.push({ ...s, agl: s.agl + 3.2 });
+  await new Promise((r) => setTimeout(r, 0));
+  const s = out[0].summary;
+  assert.equal(s.aglOffsetFt, 3.2);
+  assert.equal(plain.summary.aglOffsetFt, 0);
+  assert.ok(Math.abs(s.flare.flareHeightFt! - plain.summary.flare.flareHeightFt!) < 0.01);
+  assert.ok(Math.abs(s.flare.floatTimeS - plain.summary.flare.floatTimeS) < 0.01);
+  assert.deepEqual(out[0].trace!.agl, plain.trace!.agl);
+  // Too little rollout to judge: the reading taken while parked is used, then the contact sample.
+  const few = [{ t: 0, agl: 2.5, onGround: true }, { t: 0.5, agl: 2.4, onGround: true }] as any;
+  assert.equal(groundOffset(few, 0, 2.2), 2.2);
+  assert.equal(groundOffset(few, 0, null), 2.5);
+});
+
+test('fast sampling is requested from arming until shortly after contact', () => {
+  const det = new LandingDetector({ onLanding: () => undefined });
+  const seen: boolean[] = [];
+  const samples = simulate();
+  let contactT = -1;
+  for (const s of samples) {
+    det.push(s);
+    if (contactT < 0 && det.currentPhase === 'rollout') contactT = s.t;
+    seen.push(det.wantsFastSampling);
+  }
+  const at = (t: number) => seen[samples.findIndex((s) => s.t >= t)];
+  assert.equal(seen[0], false, 'not on the approach above 200 ft');
+  assert.equal(at(contactT - 1), true);
+  assert.equal(at(contactT + 1), true);
+  assert.equal(at(contactT + 5), false);
+});
+
+test('every explained figure has a title and a text', () => {
+  for (const k of ['vs', 'g', 'crab', 'wind', 'flare', 'pitchChange', 'float', 'bounces', 'height', 'position']) assert.ok(method(k), k);
+  for (const m of METHODS) assert.ok(m.title.length > 3 && m.text.length > 40 && !m.text.includes('<'), m.key);
 });

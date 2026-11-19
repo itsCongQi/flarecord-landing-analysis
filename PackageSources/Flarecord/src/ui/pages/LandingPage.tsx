@@ -4,6 +4,7 @@ import type { Units } from '../../core/units';
 import { chartSvg, stackSvg, stackTimeAt, type ChartMarker } from '../components/chartSvg';
 import { rolloutView, runwayView, THRESHOLD } from '../components/runwaySvg';
 import { esc, fmtAgo, fmtWhen, sided } from '../format';
+import { helpBtn } from '../methods';
 import { EXAMPLE_NOTE, PageBase, titleHtml } from './PageBase';
 
 const LINE = '#5ab0ff';
@@ -84,7 +85,7 @@ export class LandingPage extends PageBase {
     const view = runwayView(s, tr, u, this.drawingWidth(98));
     const runwayPanel = view
       ? `<div class="la-panel la-rw-panel">
-          <div class="la-panel-head"><span class="la-label">TOUCHDOWN POINT</span><span class="la-note">${view.caption}</span></div>
+          <div class="la-panel-head"><span class="la-label">TOUCHDOWN POINT${helpBtn('position')}</span><span class="la-note">${view.caption}</span></div>
           ${view.svg}
           <div class="la-legend">
             <span class="la-key"><i class="la-key-dash"></i>Approach track</span>
@@ -125,7 +126,7 @@ export class LandingPage extends PageBase {
       const cursor = this.cursorT !== null ? Math.max(t[0], Math.min(t[t.length - 1], this.cursorT)) : null;
       detail = `
       <div class="la-panel la-table la-gates">
-        <div class="la-set-head la-panel-head"><span class="la-label">VALUES BY HEIGHT</span><span class="la-note">Last descent through each height. Tap a row to place the cursor on the graph.</span></div>
+        <div class="la-set-head la-panel-head"><span class="la-label">VALUES BY HEIGHT${helpBtn('height')}</span><span class="la-note">Last descent through each height. Tap a row to place the cursor on the graph.</span></div>
         ${this.gateTable(rows, cursor, u, g !== null)}
       </div>
       <div class="la-panel la-chart-box">
@@ -204,27 +205,32 @@ export class LandingPage extends PageBase {
   }
 
   private cells(s: LandingSummary, u: Units): string {
-    const cell = (label: string, value: string, unit = '') => `<div class="la-cell"><div class="la-label">${label}</div><div class="la-value">${value}${unit ? ` <span>${unit}</span>` : ''}</div></div>`;
+    const cell = (label: string, value: string, unit = '', help = '', sub = '') =>
+      `<div class="la-cell">${help ? helpBtn(help, true) : ''}<div class="la-label">${label}</div><div class="la-value">${value}${unit ? ` <span>${unit}</span>` : ''}</div>${sub ? `<div class="la-cell-sub">${sub}</div>` : ''}</div>`;
+    // The half-second average sits under the contact value; when the sim gave no contact value
+    // the average is the main figure and says so.
+    const avg = s.avgVsFpm !== undefined && s.avgVsFpm !== null ? `${u.fmtVs(s.avgVsFpm)} ${u.vsUnit}` : '';
+    const vsSub = s.vsSource === 'fit' ? '0.5 s average' : s.vsSource === 'sample' ? 'last reading before contact' : avg ? `0.5 s avg ${avg}` : '';
     const bank = sided(s.bankDeg, 1);
     const crab = sided(s.crabDeg, 1);
     const xw = sided(u.speed(s.crosswindKt), 0);
     const f = s.flare;
     const hw = Math.round(u.speed(s.headwindKt));
     return [
-      cell('VERTICAL SPEED', u.fmtVs(s.touchdownVsFpm), u.vsUnit),
-      cell('PEAK LOAD', s.peakG.toFixed(2), 'g'),
+      cell('VERTICAL SPEED', u.fmtVs(s.touchdownVsFpm), u.vsUnit, 'vs', vsSub),
+      cell('PEAK LOAD', s.peakG.toFixed(2), 'g', 'g'),
       cell('IAS / GS', `${u.fmtSpeed(s.touchdownIasKt)} / ${u.fmtSpeed(s.touchdownGsKt)}`, u.speedUnit),
       cell('PITCH', `${s.pitchDeg > 0 ? '+' : ''}${s.pitchDeg.toFixed(1)}°`),
       cell('BANK', `${bank.value}°`, bank.side),
-      cell('CRAB', `${crab.value}°`, crab.side),
-      cell(hw < 0 ? 'TAILWIND' : 'HEADWIND', String(Math.abs(hw)), u.speedUnit),
-      cell('CROSSWIND', xw.value, xw.side ? `${u.speedUnit} from ${xw.side}` : u.speedUnit),
-      f.vsAtFlareFpm !== null ? cell('V/S AT FLARE', u.fmtVs(f.vsAtFlareFpm), u.vsUnit) : cell('V/S AT FLARE', 'n/a'),
-      f.pitchChangeDeg !== null ? cell('PITCH CHANGE', `${signed(f.pitchChangeDeg, 1)}°`, f.approachPitchDeg !== null ? `from ${f.approachPitchDeg.toFixed(1)}°` : '') : cell('PITCH CHANGE', 'n/a'),
-      cell('FLARE HEIGHT', f.flareHeightFt !== null ? u.fmtHeight(f.flareHeightFt) : 'n/a', f.flareHeightFt !== null ? u.heightUnit : ''),
-      cell('FLARE DURATION', f.flareDurationS !== null ? f.flareDurationS.toFixed(1) : 'n/a', f.flareDurationS !== null ? 's' : ''),
-      cell(`FLOAT BELOW ${u.s.height === 'ft' ? '5 FT' : '1.5 M'}`, f.floatTimeS.toFixed(1), 's'),
-      cell('BOUNCES', String(s.bounces)),
+      cell('CRAB', `${crab.value}°`, crab.side, 'crab'),
+      cell(hw < 0 ? 'TAILWIND' : 'HEADWIND', String(Math.abs(hw)), u.speedUnit, 'wind'),
+      cell('CROSSWIND', xw.value, xw.side ? `${u.speedUnit} from ${xw.side}` : u.speedUnit, 'wind'),
+      f.vsAtFlareFpm !== null ? cell('V/S AT FLARE', u.fmtVs(f.vsAtFlareFpm), u.vsUnit, 'flare') : cell('V/S AT FLARE', 'n/a', '', 'flare'),
+      f.pitchChangeDeg !== null ? cell('PITCH CHANGE', `${signed(f.pitchChangeDeg, 1)}°`, f.approachPitchDeg !== null ? `from ${f.approachPitchDeg.toFixed(1)}°` : '', 'pitchChange') : cell('PITCH CHANGE', 'n/a', '', 'pitchChange'),
+      cell('FLARE HEIGHT', f.flareHeightFt !== null ? u.fmtHeight(f.flareHeightFt) : 'n/a', f.flareHeightFt !== null ? u.heightUnit : '', 'flare'),
+      cell('FLARE DURATION', f.flareDurationS !== null ? f.flareDurationS.toFixed(1) : 'n/a', f.flareDurationS !== null ? 's' : '', 'flare'),
+      cell(`FLOAT BELOW ${u.s.height === 'ft' ? '5 FT' : '1.5 M'}`, f.floatTimeS.toFixed(1), 's', 'float'),
+      cell('BOUNCES', String(s.bounces), '', 'bounces'),
     ].join('');
   }
 

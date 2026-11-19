@@ -22,6 +22,10 @@ const TRACE_AFTER_MAX_S = 25;
 const TRACE_STEP_S = 0.2;
 const ARM_MIN_AIRBORNE_S = 5;
 const ARM_MIN_AGL_FT = 50;
+/** Window before contact over which the average sink rate is fitted, seconds. */
+export const FIT_WINDOW_S = 0.5;
+/** How long after contact the sampler is asked to keep its fast rate, seconds. */
+const FAST_AFTER_CONTACT_S = 3;
 
 /**
  * Turns a stream of samples into landing records.
@@ -47,6 +51,8 @@ export class LandingDetector {
   private flightSince: number | null = null;
   /** Highest AGL since the wheels last touched, for arming. */
   private maxAglSinceGround = 0;
+  /** Height reading with the aircraft standing on its wheels, feet (null until seen). */
+  private parkedOffset: number | null = null;
 
   constructor(opts: DetectorOptions) {
     this.opts = opts;
@@ -54,6 +60,16 @@ export class LandingDetector {
 
   get currentPhase(): Phase {
     return this.phase;
+  }
+
+  /**
+   * True while a touchdown is close or has just happened: the sampler runs at its fast rate then,
+   * so the contact instant and the load peak are caught more closely.
+   */
+  get wantsFastSampling(): boolean {
+    if (this.phase === 'armed') return true;
+    if (this.phase !== 'rollout' || this.contactIdx < 0) return false;
+    return this.history[this.history.length - 1].t - this.history[this.contactIdx].t < FAST_AFTER_CONTACT_S;
   }
 
   reset(): void {
@@ -65,6 +81,7 @@ export class LandingDetector {
     this.airborneSince = null;
     this.flightSince = null;
     this.maxAglSinceGround = 0;
+    this.parkedOffset = null;
   }
 
   push(s: Sample): void {
@@ -84,6 +101,8 @@ export class LandingDetector {
     if (s.onGround) {
       this.flightSince = null;
       this.maxAglSinceGround = 0;
+      // Standing or taxiing slowly: note what the height reads with the wheels on the ground.
+      if (s.gs < 5) this.parkedOffset = this.parkedOffset === null ? s.agl : this.parkedOffset + 0.05 * (s.agl - this.parkedOffset);
     } else {
       if (this.flightSince === null) this.flightSince = s.t;
       this.maxAglSinceGround = Math.max(this.maxAglSinceGround, s.agl);
@@ -144,7 +163,10 @@ export class LandingDetector {
   }
 
   /** Build the record. Public for tests. */
-  build(samples: Sample[], ci: number, runways: RunwayEnd[], touchAndGo: boolean, bounces: number, simVs: number | null): LandingRecord {
+  build(raw: Sample[], ci: number, runways: RunwayEnd[], touchAndGo: boolean, bounces: number, simVs: number | null): LandingRecord {
+    // Zero the height for this aircraft, so 0 ft is wheels on the ground whatever the airframe.
+    const offset = groundOffset(raw, ci, this.parkedOffset);
+    const samples = offset === 0 ? raw : raw.map((s) => ({ ...s, agl: s.agl - offset }));
     const contact = samples[ci];
     const before = samples[Math.max(0, ci - 1)];
     const contactT = contact.t;
@@ -158,7 +180,11 @@ export class LandingDetector {
     let peakG = 0;
     for (const s of samples) if (s.t >= contactT - 0.1 && s.t <= contactT + 1.0) peakG = Math.max(peakG, s.g);
 
-    const vs = simVs ?? before.vs;
+    // The headline figure is the sim's own value at contact. Without it, the fitted average over
+    // the last half second is steadier than one vertical speed sample and follows runway slope.
+    const avgVs = fitSinkRate(samples, ci);
+    const vs = simVs ?? avgVs ?? before.vs;
+    const vsSource = simVs !== null ? 'sim' : avgVs !== null ? 'fit' : 'sample';
     const crab = angleDiff(contact.heading, contact.track);
     const wind = windComponents(contact.windDir, contact.windSpd, contact.heading);
 
@@ -193,6 +219,9 @@ export class LandingDetector {
         recordedAt: now,
         aircraft: this.opts.aircraftName?.() ?? 'Unknown aircraft',
         touchdownVsFpm: Math.round(vs),
+        avgVsFpm: avgVs === null ? null : Math.round(avgVs),
+        vsSource,
+        aglOffsetFt: round1(offset),
         peakG: Math.round(peakG * 100) / 100,
         touchdownIasKt: Math.round(contact.ias),
         touchdownGsKt: Math.round(contact.gs),
@@ -212,6 +241,52 @@ export class LandingDetector {
       trace: buildTrace(samples, contactT, runway),
     };
   }
+}
+
+/**
+ * Average sink rate over the last half second before contact, fpm (negative = down): the slope of
+ * the least-squares straight line through height against time, contact sample included. Height is
+ * measured to the ground under the aircraft, so the result follows a sloping runway. Null when
+ * there are too few samples to fit.
+ */
+export function fitSinkRate(samples: Sample[], ci: number, windowS = FIT_WINDOW_S): number | null {
+  const contactT = samples[ci].t;
+  let from = ci;
+  while (from > 0 && samples[from - 1].t >= contactT - windowS - 1e-6 && !samples[from - 1].onGround) from--;
+  const n = ci - from + 1;
+  if (n < 4) return null;
+  let st = 0;
+  let sh = 0;
+  for (let i = from; i <= ci; i++) {
+    st += samples[i].t - contactT;
+    sh += samples[i].agl;
+  }
+  const mt = st / n;
+  const mh = sh / n;
+  let num = 0;
+  let den = 0;
+  for (let i = from; i <= ci; i++) {
+    const dt = samples[i].t - contactT - mt;
+    num += dt * (samples[i].agl - mh);
+    den += dt * dt;
+  }
+  return den > 0 ? (num / den) * 60 : null;
+}
+
+/**
+ * What the height reads with the wheels on the ground, feet. Taken from the settled part of the
+ * rollout of this landing (median, from 1 s after contact), else from the last time the aircraft
+ * stood still before the flight, else from the contact sample itself.
+ */
+export function groundOffset(samples: Sample[], ci: number, parked: number | null): number {
+  const contactT = samples[ci].t;
+  const settled: number[] = [];
+  for (let i = ci; i < samples.length; i++) if (samples[i].onGround && samples[i].t >= contactT + 1) settled.push(samples[i].agl);
+  if (settled.length >= 5) {
+    settled.sort((a, b) => a - b);
+    return settled[Math.floor(settled.length / 2)];
+  }
+  return parked ?? samples[ci].agl;
 }
 
 function round1(x: number): number {
