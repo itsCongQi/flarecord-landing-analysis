@@ -177,3 +177,4 @@ $thr: #c297ff;
 .la-method-text b { color: $text; font-weight: 500; }
 .la-file-ok { color: #6cc070; }
 .la-file-off { color: #e3b341; }
+.la-start-error { padding: 120px 40px 40px; p { color: $muted; margin: 10px 0 18px; } pre { white-space: pre-wrap; word-break: break-all; font-size: 13px; line-height: 19px; color: #e3b341; background-color: $panel; border: 1px solid $line; border-radius: 6px; padding: 14px 16px; } }

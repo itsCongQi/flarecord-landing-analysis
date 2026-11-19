@@ -30,17 +30,20 @@ interface Job {
 
 export class FileBridge {
   private readonly queue: Job[] = [];
-  private current: { id: number; job: Job; timer: ReturnType<typeof setTimeout> } | null = null;
+  private current: { id: string; job: Job; timer: ReturnType<typeof setTimeout> } | null = null;
   private nextId = 1;
   /** Requests that got no answer or an error since the start. */
   failures = 0;
 
   private readonly bus: BusLike;
   private readonly timeoutMs: number;
+  /** Marks this bridge's requests, so two bridges on one bus do not take each other's answers. */
+  private readonly tag: string;
 
-  constructor(bus: BusLike, timeoutMs = 5000) {
+  constructor(bus: BusLike, timeoutMs = 5000, tag = 'm') {
     this.bus = bus;
     this.timeoutMs = timeoutMs;
+    this.tag = tag;
     bus.on(RES_EVENT, (data) => this.onReply(String(data)));
   }
 
@@ -82,7 +85,7 @@ export class FileBridge {
   private pump(): void {
     if (this.current || this.queue.length === 0) return;
     const job = this.queue.shift() as Job;
-    const id = this.nextId++;
+    const id = `${this.tag}${this.nextId++}`;
     const timer = setTimeout(() => this.finish(id, 'ERR', ''), this.timeoutMs);
     this.current = { id, job, timer };
     try {
@@ -98,10 +101,10 @@ export class FileBridge {
     const a = data.indexOf('\n');
     const b = a < 0 ? -1 : data.indexOf('\n', a + 1);
     if (b < 0) return;
-    this.finish(Number(data.slice(0, a)), data.slice(a + 1, b), data.slice(b + 1));
+    this.finish(data.slice(0, a), data.slice(a + 1, b), data.slice(b + 1));
   }
 
-  private finish(id: number, status: string, value: string): void {
+  private finish(id: string, status: string, value: string): void {
     const cur = this.current;
     // A late answer to a request that already timed out is ignored.
     if (!cur || cur.id !== id) return;

@@ -1,4 +1,5 @@
 import { EventBus, Subject } from '@microsoft/msfs-sdk';
+import { mark } from './boot.ts';
 import { LandingDetector } from './core/LandingDetector.ts';
 import type { LandingRecord, LandingSummary, Sample } from './core/types.ts';
 import { parseSettings, type Settings } from './core/units.ts';
@@ -38,10 +39,12 @@ export class AnalyzerService {
   /** Raised when the state of file storage changes, so Settings can show it. */
   readonly fileState = Subject.create<string>(this.store.state);
 
+  // The file side is attached later (see the constructor): nothing about it may stop the app
+  // from starting.
   private static createStore(): MirroredStore {
-    const bus = simCommBus();
-    return new MirroredStore(new DataStoreAdapter(), bus ? new FileBridge(bus) : null);
+    return new MirroredStore(new DataStoreAdapter(), null);
   }
+
   readonly log = this.createLog();
   /** Latest live sample, for the Live strip at the top of the app. */
   readonly live = Subject.create<Sample | null>(null);
@@ -52,6 +55,32 @@ export class AnalyzerService {
 
   /** Display units and options, saved next to the log. */
   readonly settings = Subject.create<Settings>(parseSettings(this.store.get(SETTINGS_KEY)));
+
+  /** Connect to the storage module and bring files and DataStore in step, in the background. */
+  private startFiles(): void {
+    try {
+      const bus = simCommBus();
+      if (!bus) return;
+      this.store.attach(new FileBridge(bus));
+      this.fileState.set(this.store.state);
+      this.store
+        .start()
+        .then((changed) => {
+          if (changed) {
+            const wasExamples = this.log.showingExamples;
+            this.log.reload();
+            this.settings.set(parseSettings(this.store.get(SETTINGS_KEY)));
+            const cur = this.selected.get();
+            if (wasExamples || !cur || !this.log.list().some((x) => x.id === cur.id)) this.selected.set(this.log.latest());
+          }
+          this.fileState.set(this.store.state);
+          mark(`file storage ${this.store.state}, ${this.store.startResult}`);
+        })
+        .catch((e) => mark('file storage failed', e));
+    } catch (e) {
+      mark('file storage not available', e);
+    }
+  }
 
   private readonly detector: LandingDetector;
   private readonly sampler: SimVarSampler;
@@ -105,16 +134,7 @@ export class AnalyzerService {
       () => this.detector.wantsFastSampling,
     );
     this.sampler.start();
-    // Files and DataStore are brought in step in the background; the app is usable meanwhile.
-    void this.store.start().then((changed) => {
-      if (changed) {
-        const wasExamples = this.log.showingExamples;
-        this.log.reload();
-        this.settings.set(parseSettings(this.store.get(SETTINGS_KEY)));
-        const cur = this.selected.get();
-        if (wasExamples || !cur || !this.log.list().some((x) => x.id === cur.id)) this.selected.set(this.log.latest());
-      }
-      this.fileState.set(this.store.state);
-    });
+    // Well after the app has registered, so a problem here can never keep it off the tablet.
+    setTimeout(() => this.startFiles(), 3000);
   }
 }

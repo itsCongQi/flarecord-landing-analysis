@@ -32,7 +32,7 @@ export class MirroredStore implements KeyValueStore {
   private readonly early = new Set<string>();
 
   private readonly inner: KeyValueStore;
-  private readonly bridge: FileBridge | null;
+  private bridge: FileBridge | null;
   private readonly prefix: string;
 
   constructor(inner: KeyValueStore, bridge: FileBridge | null, prefix = LandingLog.PREFIX) {
@@ -67,10 +67,11 @@ export class MirroredStore implements KeyValueStore {
   }
 
   private mirror(key: string, value: string): void {
-    if (!this.bridge || this.state === 'unavailable' || key.indexOf(this.prefix) !== 0) return;
+    if (key.indexOf(this.prefix) !== 0) return;
     const short = key.slice(this.prefix.length);
-    if (this.state === 'starting') {
-      this.early.add(short);
+    // Not in step with the files (yet): remember the key, it is sent once start() has finished.
+    if (!this.bridge || this.state !== 'active') {
+      if (short !== REV) this.early.add(short);
       return;
     }
     void this.bridge.write(short, value);
@@ -91,6 +92,13 @@ export class MirroredStore implements KeyValueStore {
   private writeRev(n: number): Promise<boolean> {
     this.inner.set(this.prefix + REV, String(n));
     return (this.bridge as FileBridge).write(REV, String(n));
+  }
+
+  /** Give the store its bridge after construction; follow with start(). */
+  attach(bridge: FileBridge): void {
+    this.bridge = bridge;
+    this.state = 'starting';
+    this.startResult = 'pending';
   }
 
   /**
