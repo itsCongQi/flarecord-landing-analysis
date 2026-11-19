@@ -1,5 +1,5 @@
 /**
- * Core data types for the landing analyzer.
+ * Core data types for Flarecord.
  *
  * Everything under src/core is plain TypeScript with no MSFS dependencies, so it
  * can be unit-tested in Node with simulated flight data (see /test).

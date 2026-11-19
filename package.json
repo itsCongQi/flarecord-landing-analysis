@@ -1,5 +1,5 @@
 {
-  "name": "msfs-landing-analyzer",
+  "name": "flarecord-landing-monitor",
   "private": true,
   "version": "0.1.0",
   "description": "MSFS 2024 EFB app that records and analyses every landing in-sim",

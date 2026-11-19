@@ -6,11 +6,11 @@
  *   node --experimental-strip-types --no-warnings test/make-examples.ts
  */
 import { writeFileSync } from 'node:fs';
-import { LandingDetector } from '../PackageSources/LandingAnalyzer/src/core/LandingDetector.ts';
-import type { LandingRecord } from '../PackageSources/LandingAnalyzer/src/core/types.ts';
+import { LandingDetector } from '../PackageSources/Flarecord/src/core/LandingDetector.ts';
+import type { LandingRecord } from '../PackageSources/Flarecord/src/core/types.ts';
 import { RUNWAY, simulate, type Scenario } from './simulate.ts';
 
-const OUT = new URL('../PackageSources/LandingAnalyzer/src/demo/exampleLandings.json', import.meta.url);
+const OUT = new URL('../PackageSources/Flarecord/src/demo/exampleLandings.json', import.meta.url);
 
 // Newest first. recordedAt is spaced a day apart ending on a fixed date, so the file is stable.
 const SCENARIOS: { aircraft: string; sc: Partial<Scenario> }[] = [

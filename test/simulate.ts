@@ -2,8 +2,8 @@
  * Synthetic approach-and-landing generator, used to exercise the analysis core without the sim.
  * Produces 20 Hz samples for a straight-in 3 degree approach onto a runway heading 270.
  */
-import { offsetLatLon } from '../PackageSources/LandingAnalyzer/src/core/geo.ts';
-import type { RunwayEnd, Sample } from '../PackageSources/LandingAnalyzer/src/core/types.ts';
+import { offsetLatLon } from '../PackageSources/Flarecord/src/core/geo.ts';
+import type { RunwayEnd, Sample } from '../PackageSources/Flarecord/src/core/types.ts';
 
 export const RUNWAY: RunwayEnd = {
   airportIdent: 'KTST',

@@ -11,9 +11,9 @@ import { SummaryPage } from './ui/pages/SummaryPage';
 import { SettingsPage } from './ui/pages/SettingsPage';
 import { TabBar } from './ui/components/TabBar';
 
-import './LandingAnalyzer.scss';
+import './Flarecord.scss';
 
-class LandingAnalyzerView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
+class FlarecordView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
   protected defaultView = 'Summary';
   private readonly activePage = Subject.create('Summary');
 
@@ -41,7 +41,7 @@ class LandingAnalyzerView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
       }
       this.activePage.set(page);
     } catch (e) {
-      console.error(`LandingAnalyzer: could not open ${page}`, e);
+      console.error(`Flarecord: could not open ${page}`, e);
     }
   }
 
@@ -57,15 +57,15 @@ class LandingAnalyzerView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
 
 /**
  * BASE_URL is defined in build.js and points at this app's folder in the package
- * (coui://html_ui/efb_ui/efb_apps/LandingAnalyzer).
+ * (coui://html_ui/efb_ui/efb_apps/Flarecord).
  */
 declare const BASE_URL: string;
 
 // The class name is the EFB's internal app name. It matches the package folder name, which the
 // build uses to scope this app's CSS, as in the SDK's TemplateApp sample.
-class LandingAnalyzer extends App {
+class Flarecord extends App {
   public get name(): string {
-    return 'Landing Analyzer';
+    return 'Flarecord';
   }
 
   public get icon(): string {
@@ -79,14 +79,14 @@ class LandingAnalyzer extends App {
 
   public async install(props: AppInstallProps): Promise<void> {
     // The bundled stylesheet is not applied automatically: load it like the SDK sample does.
-    Efb.loadCss(`${BASE_URL}/LandingAnalyzer.css`).catch(() => undefined);
+    Efb.loadCss(`${BASE_URL}/Flarecord.css`).catch(() => undefined);
     AnalyzerService.start(this.bus);
     return super.install(props);
   }
 
-  public render(): TVNode<LandingAnalyzerView> {
-    return <LandingAnalyzerView bus={this.bus} />;
+  public render(): TVNode<FlarecordView> {
+    return <FlarecordView bus={this.bus} />;
   }
 }
 
-Efb.use(LandingAnalyzer);
+Efb.use(Flarecord);
