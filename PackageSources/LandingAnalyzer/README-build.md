@@ -24,8 +24,8 @@ sample's `efb_api/` and `vendor/` folders next to it, because `@efb/efb-api` is 
    ```
 
    fspackagetool runs the sim in a background package-build mode and closes it when done.
-6. Copy `Packages/landing-analyzer-efb/` (the folder with `manifest.json` and `layout.json`)
-   into your Community folder.
+6. Copy `Packages/Packages/landing-analyzer-efb/` (the folder with `manifest.json` and
+   `layout.json`; the project XML adds the inner `Packages`) into your Community folder.
 
 Notes:
 
