@@ -2,7 +2,7 @@ import { heightGates, traceAt, type Gate, type TracePoint } from '../../core/gat
 import type { LandingSummary, LandingTrace } from '../../core/types';
 import type { Units } from '../../core/units';
 import { chartSvg, stackSvg, stackTimeAt, type ChartMarker } from '../components/chartSvg';
-import { runwayView } from '../components/runwaySvg';
+import { rolloutView, runwayView } from '../components/runwaySvg';
 import { esc, fmtWhen, sided } from '../format';
 import { EXAMPLE_NOTE, PageBase, titleHtml } from './PageBase';
 
@@ -24,7 +24,8 @@ const signed = (v: number, digits: number) => `${v > 0 ? '+' : ''}${v.toFixed(di
  *  - One combined chart: height, vertical speed, pitch, airspeed and elevator input stacked on a
  *    shared time axis. Tapping the chart or a height row places a cursor and reads every value
  *    at that moment.
- *  - The rollout's distance from the centreline when the runway was identified.
+ *  - The rollout track over a plain top-down runway (left at the top, right at the bottom), to
+ *    show the deviation from the centreline, when the runway was identified.
  */
 export class LandingPage extends PageBase {
   public readonly tabName = 'Landing';
@@ -111,7 +112,7 @@ export class LandingPage extends PageBase {
         <div class="la-readout">${cursor !== null ? this.readout(traceAt(tr, cursor), u) : '<span class="la-note">Tap the graph to read every value at that moment.</span>'}</div>
         <div class="la-stack-hit">${this.stack(s, tr, t, cut, gates, cursor, u)}</div>
       </div>
-      ${this.rollout(tr, u)}`;
+      ${this.rollout(s, tr, u)}`;
     }
 
     el.innerHTML = `
@@ -254,7 +255,17 @@ export class LandingPage extends PageBase {
     return head + rows.join('');
   }
 
-  private rollout(tr: LandingTrace, u: Units): string {
+  private rollout(s: LandingSummary, tr: LandingTrace, u: Units): string {
+    // Top-down view when the runway and the ground track are known.
+    const view = rolloutView(s, tr, u, this.drawingWidth(98));
+    if (view) {
+      return `<div class="la-panel la-rw-panel">
+        <div class="la-panel-head"><span class="la-label">ROLLOUT · track over the runway, seen from above</span><span class="la-note">${view.caption}</span></div>
+        ${view.svg}
+        <div class="la-legend"><span class="la-key"><i class="la-key-solid"></i>Rollout track</span><span class="la-legend-note">${view.note}</span></div>
+      </div>`;
+    }
+    // Landings recorded before the ground track was stored: the offset over time.
     const r0 = tr.t.findIndex((x) => x >= 0);
     if (r0 < 0 || !tr.centerline.slice(r0).some((v) => v !== null)) return '';
     const svg = chartSvg({

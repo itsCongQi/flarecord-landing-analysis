@@ -75,6 +75,7 @@ $ok: #3fb950;
 .la-key i { display: block; width: 22px; height: 0; margin-right: 8px; border-top: 2px solid $accent; }
 .la-key .la-key-dash { border-top-style: dashed; }
 .la-key .la-key-line { opacity: 0.6; }
+.la-key .la-key-solid { border-top-width: 3px; }
 .la-key .la-key-line2 { border-top-color: $muted; }
 .la-key .la-key-flare { width: 0; height: 16px; border-top: 0; border-left: 2px dashed $flare; }
 .la-key .la-key-gate { width: 0; height: 16px; border-top: 0; border-left: 1px dotted $muted; }
@@ -96,6 +97,7 @@ $ok: #3fb950;
 .la-rw { display: block; }
 .la-rw-label { font-size: 11px; fill: $muted; }
 .la-rw-call { font-size: 12px; font-weight: 600; letter-spacing: 0.6px; }
+.la-rw-side { font-size: 10px; font-weight: 600; letter-spacing: 1px; fill: $muted; }
 .la-rw-num { font-size: 26px; font-weight: 600; }
 
 // Graphs.
