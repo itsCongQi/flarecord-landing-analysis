@@ -58,6 +58,16 @@ export class AnalyzerService {
     this.settings.set(next);
   }
 
+  /** Small UI preferences kept next to the log (e.g. the Summary's aircraft selection). */
+  getPref(key: string): string | null {
+    return this.store.get(LandingLog.PREFIX + 'pref.' + key);
+  }
+
+  setPref(key: string, value: string | null): void {
+    if (value === null) this.store.remove(LandingLog.PREFIX + 'pref.' + key);
+    else this.store.set(LandingLog.PREFIX + 'pref.' + key, value);
+  }
+
   private constructor(bus: EventBus) {
     const runways = new RunwayProvider(bus);
     this.detector = new LandingDetector({

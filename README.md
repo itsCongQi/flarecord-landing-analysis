@@ -38,7 +38,9 @@ the sim; see "Next steps" for what still needs checking in flight.
   chart or a height row places a cursor and reads every value at that moment. Previous and Next
   step through the log.
 - **Log**: every landing as a table with a filter. A row opens that landing.
-- **Summary**: figures across landings, for the last 10, last 30 or all, filterable by aircraft.
+- **Summary** (the first tab): figures across landings, for the last 10, last 30 or all. "All
+  aircraft" is one tap; "Choose aircraft" opens a searchable, scrolling tick list with landing
+  counts, and the selection is remembered.
   Medians, the touchdown points overlaid on one runway outline, and a landing by landing graph of
   vertical speed, peak load, touchdown point, centreline offset and flare height. Tapping the
   graph opens that landing.

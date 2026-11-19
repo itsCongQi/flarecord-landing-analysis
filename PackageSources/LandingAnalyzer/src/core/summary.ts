@@ -47,3 +47,31 @@ export function aircraftCounts(list: readonly LandingSummary[]): { aircraft: str
   }
   return out.sort((a, b) => b.count - a.count);
 }
+
+/**
+ * Which aircraft the Summary covers. `null` means all of them, including aircraft first flown
+ * later; otherwise the ticked names (an empty list is "none ticked yet").
+ */
+export type AircraftSelection = string[] | null;
+
+/** Tick or untick one aircraft. Ticking the last unticked one goes back to "all". */
+export function toggleAircraft(sel: AircraftSelection, name: string, allNames: string[]): AircraftSelection {
+  const current = sel === null ? allNames : sel;
+  const next = current.includes(name) ? current.filter((n) => n !== name) : [...current, name];
+  return allNames.every((n) => next.includes(n)) ? null : next;
+}
+
+export function filterByAircraft<T extends { aircraft: string }>(list: readonly T[], sel: AircraftSelection): T[] {
+  return sel === null ? [...list] : list.filter((s) => sel.includes(s.aircraft));
+}
+
+/** Read a stored selection; anything missing or damaged means "all". */
+export function parseSelection(raw: string | null): AircraftSelection {
+  if (!raw) return null;
+  try {
+    const p = JSON.parse(raw);
+    return Array.isArray(p) && p.every((x) => typeof x === 'string') ? (p as string[]) : null;
+  } catch {
+    return null;
+  }
+}

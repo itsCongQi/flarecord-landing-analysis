@@ -7,7 +7,7 @@ import { LandingLog, MemoryStore } from '../PackageSources/LandingAnalyzer/src/s
 import type { LandingRecord } from '../PackageSources/LandingAnalyzer/src/core/types.ts';
 import { crossingTime, heightGates, traceAt } from '../PackageSources/LandingAnalyzer/src/core/gates.ts';
 import { stackSvg, stackTimeAt } from '../PackageSources/LandingAnalyzer/src/ui/components/chartSvg.ts';
-import { aircraftCounts, summarize } from '../PackageSources/LandingAnalyzer/src/core/summary.ts';
+import { aircraftCounts, filterByAircraft, parseSelection, summarize, toggleAircraft } from '../PackageSources/LandingAnalyzer/src/core/summary.ts';
 import { DEFAULT_SETTINGS, Units, group, parseSettings, runwayMarkings } from '../PackageSources/LandingAnalyzer/src/core/units.ts';
 import { dispersionStrip, runwayView } from '../PackageSources/LandingAnalyzer/src/ui/components/runwaySvg.ts';
 import { RUNWAY, simulate, type Scenario } from './simulate.ts';
@@ -249,4 +249,25 @@ test('combined chart: cursor values and tap position', async () => {
   assert.equal(stackTimeAt(tr.t, 1), tr.t[tr.t.length - 1]);
   const mid = stackTimeAt(tr.t, (44 + (1080 - 44 - 86) / 2) / 1080);
   assert.ok(Math.abs(mid - (tr.t[0] + tr.t[tr.t.length - 1]) / 2) < 1e-6);
+});
+
+test('summary aircraft selection: tick on and off, all by default', () => {
+  const names = ['A320', 'B738', 'C172'];
+  const list = [{ aircraft: 'A320' }, { aircraft: 'B738' }, { aircraft: 'A320' }, { aircraft: 'C172' }];
+  assert.equal(filterByAircraft(list, null).length, 4, 'null means every aircraft');
+  // Unticking one from "all" keeps the rest.
+  const noCessna = toggleAircraft(null, 'C172', names);
+  assert.deepEqual(noCessna, ['A320', 'B738']);
+  assert.equal(filterByAircraft(list, noCessna).length, 3);
+  // Ticking the last one back returns to "all", so aircraft flown later are included too.
+  assert.equal(toggleAircraft(noCessna, 'C172', names), null);
+  // From nothing ticked, build up a selection.
+  assert.deepEqual(toggleAircraft([], 'B738', names), ['B738']);
+  assert.equal(filterByAircraft(list, []).length, 0);
+  assert.deepEqual(toggleAircraft(['B738'], 'B738', names), []);
+  // Stored selections survive bad data.
+  assert.equal(parseSelection(null), null);
+  assert.equal(parseSelection('{oops'), null);
+  assert.equal(parseSelection('[1,2]'), null);
+  assert.deepEqual(parseSelection('["A320"]'), ['A320']);
 });

@@ -14,8 +14,8 @@ import { TabBar } from './ui/components/TabBar';
 import './LandingAnalyzer.scss';
 
 class LandingAnalyzerView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
-  protected defaultView = 'Landing';
-  private readonly activePage = Subject.create('Landing');
+  protected defaultView = 'Summary';
+  private readonly activePage = Subject.create('Summary');
 
   protected registerViews(): void {
     const svc = AnalyzerService.instance;
