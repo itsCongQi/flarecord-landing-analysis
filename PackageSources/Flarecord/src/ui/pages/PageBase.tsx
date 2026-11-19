@@ -53,7 +53,7 @@ export abstract class PageBase extends UiView<PageProps> {
     try {
       this.draw(el);
     } catch (e) {
-      console.error(`LandingAnalyzer: ${this.pageClass} draw failed`, e);
+      console.error(`Flarecord: ${this.pageClass} draw failed`, e);
     }
   }
 

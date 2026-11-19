@@ -1,16 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { LandingDetector } from '../PackageSources/LandingAnalyzer/src/core/LandingDetector.ts';
-import { runwayRelative, windComponents, matchRunway } from '../PackageSources/LandingAnalyzer/src/core/geo.ts';
-import { LandingLog, MemoryStore } from '../PackageSources/LandingAnalyzer/src/storage/LandingLog.ts';
-import type { LandingRecord } from '../PackageSources/LandingAnalyzer/src/core/types.ts';
-import { crossingTime, heightGates, thresholdCrossing, traceAt } from '../PackageSources/LandingAnalyzer/src/core/gates.ts';
-import { stackSvg, stackTimeAt } from '../PackageSources/LandingAnalyzer/src/ui/components/chartSvg.ts';
-import { aircraftCounts, filterByAircraft, parseSelection, summarize, toggleAircraft } from '../PackageSources/LandingAnalyzer/src/core/summary.ts';
-import { DEFAULT_SETTINGS, Units, group, parseSettings, runwayMarkings } from '../PackageSources/LandingAnalyzer/src/core/units.ts';
-import { dispersionStrip, rolloutView, runwayView } from '../PackageSources/LandingAnalyzer/src/ui/components/runwaySvg.ts';
-import { fmtAgo } from '../PackageSources/LandingAnalyzer/src/ui/format.ts';
+import { LandingDetector } from '../PackageSources/Flarecord/src/core/LandingDetector.ts';
+import { runwayRelative, windComponents, matchRunway } from '../PackageSources/Flarecord/src/core/geo.ts';
+import { LandingLog, MemoryStore } from '../PackageSources/Flarecord/src/storage/LandingLog.ts';
+import type { LandingRecord } from '../PackageSources/Flarecord/src/core/types.ts';
+import { crossingTime, heightGates, thresholdCrossing, traceAt } from '../PackageSources/Flarecord/src/core/gates.ts';
+import { stackSvg, stackTimeAt } from '../PackageSources/Flarecord/src/ui/components/chartSvg.ts';
+import { aircraftCounts, filterByAircraft, parseSelection, summarize, toggleAircraft } from '../PackageSources/Flarecord/src/core/summary.ts';
+import { DEFAULT_SETTINGS, Units, group, parseSettings, runwayMarkings } from '../PackageSources/Flarecord/src/core/units.ts';
+import { dispersionStrip, rolloutView, runwayView } from '../PackageSources/Flarecord/src/ui/components/runwaySvg.ts';
+import { fmtAgo } from '../PackageSources/Flarecord/src/ui/format.ts';
 import { RUNWAY, simulate, type Scenario } from './simulate.ts';
 
 async function run(sc: Partial<Scenario> = {}): Promise<LandingRecord[]> {
@@ -89,7 +89,7 @@ test('log persists across instances, prunes graphs, exports CSV', async () => {
 });
 
 test('examples show only while the log is empty and are never stored', async () => {
-  const examples = JSON.parse(readFileSync(new URL('../PackageSources/LandingAnalyzer/src/demo/exampleLandings.json', import.meta.url), 'utf8')) as LandingRecord[];
+  const examples = JSON.parse(readFileSync(new URL('../PackageSources/Flarecord/src/demo/exampleLandings.json', import.meta.url), 'utf8')) as LandingRecord[];
   const store = new MemoryStore();
   const log = new LandingLog(store);
   log.setExamples(examples);
@@ -345,4 +345,26 @@ test('relative time: minutes, hours, then whole days', () => {
   assert.equal(ago(23 * 60 + 59), '23 hours ago');
   assert.equal(ago(24 * 60), '1 day ago');
   assert.equal(ago(24 * 60 * 9.5), '9 days ago');
+});
+
+test('a log saved under the earlier name is moved over on first start', async () => {
+  const store = new MemoryStore();
+  const [a] = await run();
+  const old = LandingLog.LEGACY_PREFIX;
+  store.set(old + 'index.pages', '1');
+  store.set(old + 'index.0', JSON.stringify([a.summary]));
+  store.set(old + 'trace.' + a.summary.id, JSON.stringify(a.trace));
+  store.set(old + 'unread', JSON.stringify([a.summary.id]));
+  store.set(old + 'settings', '{"dist":"m"}');
+  store.set(old + 'pref.summaryAircraft', '["Test Jet"]');
+  const log = new LandingLog(store);
+  assert.equal(log.list().length, 1);
+  assert.equal(log.getTrace(a.summary.id)!.t.length, a.trace!.t.length);
+  assert.equal(log.isUnread(a.summary.id), true);
+  assert.equal(store.get(LandingLog.PREFIX + 'settings'), '{"dist":"m"}');
+  assert.equal(store.get(LandingLog.PREFIX + 'pref.summaryAircraft'), '["Test Jet"]');
+  assert.equal(Array.from(store.data.keys()).filter((k) => k.startsWith(old)).length, 0, 'old keys are removed');
+  // A second start changes nothing, and a log already under the new name is never overwritten.
+  store.set(old + 'index.pages', '0');
+  assert.equal(new LandingLog(store).list().length, 1);
 });

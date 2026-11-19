@@ -2,7 +2,7 @@
 <AssetPackage Version="0.1.0">
 	<ItemSettings>
 		<ContentType>MISC</ContentType>
-		<Title>Landing Analyzer</Title>
+		<Title>Flarecord</Title>
 		<Manufacturer/>
 		<Creator>itsCongQi</Creator>
 	</ItemSettings>
@@ -17,16 +17,16 @@
 			<Flags>
 				<FSXCompatibility>false</FSXCompatibility>
 			</Flags>
-			<AssetDir>PackageDefinitions\landing-analyzer-efb\ContentInfo</AssetDir>
-			<OutputDir>ContentInfo\landing-analyzer-efb</OutputDir>
+			<AssetDir>PackageDefinitions\flarecord-landing-monitor\ContentInfo</AssetDir>
+			<OutputDir>ContentInfo\flarecord-landing-monitor</OutputDir>
 		</AssetGroup>
-		<AssetGroup Name="efb_apps_landinganalyzer">
+		<AssetGroup Name="efb_apps_flarecord">
 			<Type Version="0">Copy</Type>
 			<Flags>
 				<FSXCompatibility>false</FSXCompatibility>
 			</Flags>
-			<AssetDir>PackageSources\LandingAnalyzer\dist\</AssetDir>
-			<OutputDir>.\html_ui\efb_ui\efb_apps\LandingAnalyzer\</OutputDir>
+			<AssetDir>PackageSources\Flarecord\dist\</AssetDir>
+			<OutputDir>.\html_ui\efb_ui\efb_apps\Flarecord\</OutputDir>
 		</AssetGroup>
 	</AssetGroups>
 </AssetPackage>

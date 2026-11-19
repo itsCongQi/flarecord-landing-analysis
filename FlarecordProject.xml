@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project Version="2" Name="LandingAnalyzerProject" FolderName="Packages" MetadataFolderName="PackagesMetadata">
+<Project Version="2" Name="FlarecordProject" FolderName="Packages" MetadataFolderName="PackagesMetadata">
 	<OutputDirectory>.</OutputDirectory>
 	<TemporaryOutputDirectory>_PackageInt</TemporaryOutputDirectory>
 	<Packages>
-		<Package>PackageDefinitions\landing-analyzer-efb.xml</Package>
+		<Package>PackageDefinitions\flarecord-landing-monitor.xml</Package>
 	</Packages>
 </Project>

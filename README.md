@@ -1,4 +1,4 @@
-# Landing Analyzer for MSFS 2024 (prototype)
+# Flarecord for MSFS 2024 (prototype)
 
 An in-sim landing analysis addon that runs entirely inside Microsoft Flight Simulator 2024 as a
 third-party **EFB tablet app**. No external exe, no SimConnect client. It records every approach,
@@ -13,7 +13,7 @@ the sim; see "Next steps" for what still needs checking in flight.
 
 > **This repository is source code, not an installable addon.** Copying it into the sim's
 > Community folder does nothing (there is no `manifest.json`, `layout.json` or built JS yet).
-> Build it first, see `PackageSources/LandingAnalyzer/README-build.md`.
+> Build it first, see `PackageSources/Flarecord/README-build.md`.
 
 ## What it measures
 
@@ -124,7 +124,7 @@ easy addition if wanted.
 ## Layout
 
 ```
-PackageSources/LandingAnalyzer/
+PackageSources/Flarecord/
   src/core/            plain TS, no sim dependencies (tested in Node)
     types.ts           Sample, LandingSummary, LandingTrace ...
     LandingDetector.ts state machine: idle → armed (<200 ft, descending) → rollout → record
@@ -139,7 +139,7 @@ PackageSources/LandingAnalyzer/
   src/ui/              pages: Landing, Log, Summary, Settings; chartSvg and runwaySvg
                        (dependency-free SVG drawings)
   src/AnalyzerService.ts   always-on capture, started from App.install()
-  src/LandingAnalyzer.tsx  EFB App + AppView registration
+  src/Flarecord.tsx  EFB App + AppView registration
   README-build.md      how to drop this into the SDK's EFB sample and build it
 test/                  synthetic approach generator + tests
 ```

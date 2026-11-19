@@ -12,10 +12,10 @@ export interface KeyValueStore {
  * Persistent landing log.
  *
  * Layout in the store (all keys prefixed so they don't clash with other addons):
- *   LANDAN.v1.index.pages  number of index pages
- *   LANDAN.v1.index.<n>    JSON array of up to PAGE_SIZE LandingSummary, newest first
- *   LANDAN.v1.trace.<id>   JSON LandingTrace for one landing (loaded on demand for graphs)
- *   LANDAN.v1.unread       JSON array of ids of landings that have not been opened yet
+ *   FLARECORD.v1.index.pages  number of index pages
+ *   FLARECORD.v1.index.<n>    JSON array of up to PAGE_SIZE LandingSummary, newest first
+ *   FLARECORD.v1.trace.<id>   JSON LandingTrace for one landing (loaded on demand for graphs)
+ *   FLARECORD.v1.unread       JSON array of ids of landings that have not been opened yet
  *
  * Summaries are about 1.3 KB each and traces about 8 KB (measured by the tests). The SDK does
  * not document a size limit, so no single key is allowed to grow past roughly 70 KB: the index
@@ -23,7 +23,9 @@ export interface KeyValueStore {
  * keep their graphs. Older landings stay in the list with their numbers only.
  */
 export class LandingLog {
-  static readonly PREFIX = 'LANDAN.v1.';
+  static readonly PREFIX = 'FLARECORD.v1.';
+  /** Prefix used before the app was named Flarecord. Its data is moved over on first start. */
+  static readonly LEGACY_PREFIX = 'LANDAN.v1.';
   static readonly MAX_SUMMARIES = 500;
   static readonly MAX_TRACES = 60;
   static readonly PAGE_SIZE = 50;
@@ -38,6 +40,7 @@ export class LandingLog {
 
   constructor(store: KeyValueStore) {
     this.store = store;
+    this.migrateLegacy();
     this.index = this.readIndex();
     this.unread = this.readUnread();
   }
@@ -163,6 +166,40 @@ export class LandingLog {
       }
     }
     return out;
+  }
+
+  /**
+   * Move a log saved under the old key prefix to the current one, once. The store cannot list its
+   * keys, so the known ones are walked: index pages, the traces of the landings in them, the
+   * unread list, the settings and the stored preferences. Old keys are removed only after
+   * everything has been copied.
+   */
+  private migrateLegacy(): void {
+    const from = LandingLog.LEGACY_PREFIX;
+    const to = LandingLog.PREFIX;
+    try {
+      const rawPages = this.store.get(from + 'index.pages');
+      const keys = ['settings', 'unread', 'pref.summaryAircraft'];
+      if (this.store.get(to + 'index.pages') !== null) return;
+      if (rawPages !== null) {
+        keys.push('index.pages');
+        const pages = Number(rawPages) || 0;
+        for (let p = 0; p < pages; p++) {
+          keys.push('index.' + p);
+          try {
+            const parsed = JSON.parse(this.store.get(from + 'index.' + p) ?? '[]');
+            if (Array.isArray(parsed)) for (const s of parsed) if (s && typeof s.id === 'string') keys.push('trace.' + s.id);
+          } catch {
+            // A damaged page is copied as it is; its traces cannot be found.
+          }
+        }
+      }
+      const found = keys.filter((k) => this.store.get(from + k) !== null);
+      for (const k of found) if (this.store.get(to + k) === null) this.store.set(to + k, this.store.get(from + k)!);
+      for (const k of found) this.store.remove(from + k);
+    } catch (e) {
+      console.error('Flarecord: could not move the earlier log', e);
+    }
   }
 
   private readUnread(): Set<string> {
