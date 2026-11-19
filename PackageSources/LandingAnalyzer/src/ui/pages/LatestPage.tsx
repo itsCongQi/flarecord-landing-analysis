@@ -1,9 +1,10 @@
-import { ComponentProps, DisplayComponent, FSComponent, NodeReference, VNode } from '@microsoft/msfs-sdk';
+import { UiView, UiViewProps } from '@efb/efb-api';
+import { FSComponent, NodeReference, VNode } from '@microsoft/msfs-sdk';
 import type { AnalyzerService } from '../../AnalyzerService';
 import type { LandingSummary } from '../../core/types';
 import { coachingTip, fmtVs, fmtWhen, gradeClass, where } from '../format';
 
-interface Props extends ComponentProps {
+interface Props extends UiViewProps {
   svc: AnalyzerService;
   go: (page: string) => void;
 }
@@ -12,7 +13,9 @@ interface Props extends ComponentProps {
  * "Latest" page: the score ring, the six headline numbers, the score breakdown and one coaching tip.
  * Rendered as an HTML string on change; it changes once per landing, so this is cheap.
  */
-export class LatestPage extends DisplayComponent<Props> {
+// A UiView: AppViewService calls onOpen/onResume/onPause on every registered page.
+export class LatestPage extends UiView<Props> {
+  public readonly tabName = 'Latest';
   private readonly root = FSComponent.createRef<HTMLDivElement>();
 
   onAfterRender(node: VNode): void {
