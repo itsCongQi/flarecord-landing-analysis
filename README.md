@@ -48,8 +48,7 @@ the sim; see "Next steps" for what still needs checking in flight.
   aircraft" is one tap; "Choose aircraft" opens a searchable, scrolling tick list with landing
   counts, and the selection is remembered.
   Medians, the touchdown points overlaid on one runway outline, and a landing by landing graph of
-  vertical speed, peak load, touchdown point, centreline offset and flare height. Tapping the
-  graph opens that landing.
+  vertical speed, peak load, touchdown point, centreline offset and flare height.
 - **Settings**: units for runway distance (ft or m), height (ft or m), vertical speed (fpm or m/s)
   and speed (kt or km/h), defaulting to feet, fpm and knots, and the landing index switch. Landings
   are stored in fixed units and converted for display.

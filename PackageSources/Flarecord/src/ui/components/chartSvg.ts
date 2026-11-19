@@ -166,15 +166,18 @@ export function stackTimeAt(t: number[], fraction: number): number {
  * every lane; the cursor prints each lane's value in the right margin.
  */
 export function stackSvg(o: StackOptions): string {
-  const { width, padL, padR, lane, gap, padB } = STACK;
+  const { width, padL, lane, gap, padB } = STACK;
+  // The right margin holds the cursor read-outs. A sequence chart has none, so it runs to the edge.
+  const padR = o.sequence ? 8 : STACK.padR;
   // Markers with a label get a row of their own above the gate labels.
   const extraTop = (o.markers ?? []).some((m) => m.label) ? 14 : 0;
   const padT = STACK.padT + extraTop;
   const w = width - padL - padR;
   const height = stackHeight(o.lanes.length, extraTop);
   const bottom = height - padB;
-  const t0 = o.t[0];
-  const t1 = o.t[o.t.length - 1];
+  // A sequence gets half a step of room at each end, so the first and last dots are not on the frame.
+  const t0 = o.t[0] - (o.sequence ? 0.5 : 0);
+  const t1 = o.t[o.t.length - 1] + (o.sequence ? 0.5 : 0);
   const x = (t: number) => padL + ((t - t0) / (t1 - t0)) * w;
   const p: string[] = [];
   p.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${Math.round(o.pxWidth)}" height="${Math.round((o.pxWidth * height) / width)}" class="la-chart la-stack">`);
