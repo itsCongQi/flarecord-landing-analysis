@@ -99,3 +99,20 @@ test('examples show only while the log is empty and are never stored', async () 
   assert.deepEqual(log.list().map((s) => s.id), [rec.summary.id]);
   assert.equal(log.stats()?.count, 1);
 });
+
+test('ground jitter and spawn settling never record a landing', async () => {
+  const out: LandingRecord[] = [];
+  const det = new LandingDetector({ onLanding: (r) => out.push(r) });
+  const base = simulate()[0];
+  // Spawn: 1.5 s "airborne" a foot or two up while the aircraft settles, then 60 s parked at the
+  // gate with SIM ON GROUND flickering off for single samples and small negative vertical speeds.
+  for (let i = 0; i < 20 * 62; i++) {
+    const t = 500 + i * 0.05;
+    const settling = i < 30;
+    const flicker = !settling && i % 37 === 0;
+    det.push({ ...base, t, agl: settling ? 2 - i * 0.07 : flicker ? 0.4 : -1, vs: settling ? -69 : -5, ias: 0, gs: 0, onGround: !(settling || flicker) });
+  }
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(out.length, 0, 'no landing from ground jitter');
+  assert.equal(det.currentPhase, 'idle');
+});

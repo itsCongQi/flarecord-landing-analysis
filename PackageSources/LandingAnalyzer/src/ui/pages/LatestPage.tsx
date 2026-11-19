@@ -54,8 +54,25 @@ export class LatestPage extends UiView<Props> {
           .map((p) => `<div class="la-bar-row"><span class="la-bar-label">${p.label}</span><span class="la-bar"><span class="la-bar-fill" style="width:${(100 * p.points) / p.max}%"></span></span><span class="la-bar-val">${p.points}/${p.max}</span><span class="la-bar-note">${p.note}</span></div>`)
           .join('')}
       </div>
-      <button class="la-btn" id="la-open-analysis">Open flare analysis</button>`;
+      <div class="la-actions">
+        <button class="la-btn" id="la-open-analysis">Open flare analysis</button>
+        ${s.example ? '' : '<button class="la-btn la-btn-danger" id="la-delete">Delete this landing</button>'}
+      </div>`;
     el.querySelector('#la-open-analysis')?.addEventListener('click', () => this.props.go('Analysis'));
+
+    // Two taps to delete (no confirm dialogs in the EFB): the first arms, the second deletes.
+    const del = el.querySelector<HTMLButtonElement>('#la-delete');
+    let armed = false;
+    del?.addEventListener('click', () => {
+      if (!armed) {
+        armed = true;
+        del.textContent = 'Tap again to delete';
+        return;
+      }
+      const log = this.props.svc.log;
+      log.remove(s.id);
+      this.props.svc.selected.set(log.latest());
+    });
   }
 
   render(): VNode {

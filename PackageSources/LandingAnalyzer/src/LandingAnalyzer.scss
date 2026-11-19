@@ -11,16 +11,18 @@ $muted: #8b98a5;
 $accent: #4cc9f0;
 
 .la-app { position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; background-color: $bg; color: $text; font-size: 18px; }
-.la-topbar { flex-shrink: 0; display: flex; flex-direction: row; justify-content: space-between; align-items: center; padding: 10px 18px 10px 90px; border-bottom: 1px solid $line; }
+// Two rows: tabs (between the EFB's own bell at the left and clock at the right), then the live strip.
+.la-topbar { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-start; padding: 10px 18px 8px 90px; border-bottom: 1px solid $line; }
 .la-tabs { display: flex; flex-direction: row; }
 .la-tab { background-color: transparent; color: $muted; border: 0; padding: 10px 18px; margin-right: 6px; border-radius: 10px; font-size: 18px; &:hover { color: $text; background-color: $panel; } &.on { color: $text; background-color: $line; } }
-.la-live { display: flex; flex-direction: row; align-items: center; color: $muted; }
+.la-live { display: flex; flex-direction: row; align-items: center; margin: 6px 0 0 18px; color: $muted; font-size: 15px; }
 .la-status { color: $accent; margin-right: 16px; }
 .la-body { position: relative; flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-height: 0; overflow: hidden; }
 // AppViewService puts each page in a .ui-view wrapper inside an .app-container: make both fill.
 .la-body .app-container, .la-body .ui-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 .la-body .ui-view.hidden { display: none; }
-.la-page { width: 100%; height: 100%; overflow-y: scroll; padding: 16px 18px; box-sizing: border-box; }
+// Extra bottom padding keeps the last content above the EFB's own bottom bar.
+.la-page { width: 100%; height: 100%; overflow-y: scroll; padding: 16px 18px 90px; box-sizing: border-box; }
 .la-empty { text-align: center; color: $muted; margin-top: 120px; }
 .la-example-note { background-color: $panel; border: 1px dashed $muted; color: $muted; padding: 8px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 15px; }
 
@@ -54,6 +56,9 @@ $accent: #4cc9f0;
 .la-bar-note { width: 220px; flex-shrink: 0; }
 .la-bar-note, .la-bar-val { color: $muted; font-size: 14px; }
 .la-btn { margin-top: 14px; background-color: $accent; color: #001018; border: 0; padding: 12px 20px; border-radius: 10px; font-weight: 700; font-size: 18px; }
+.la-actions { display: flex; flex-direction: row; align-items: center; margin-bottom: 70px; }
+.la-actions .la-btn { margin-right: 12px; }
+.la-btn-danger { background-color: transparent; color: #f87171; border: 1px solid #f87171; }
 
 .la-an-head { display: flex; flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .la-seg { display: flex; flex-direction: row; background-color: $panel; border-radius: 10px; padding: 3px; }

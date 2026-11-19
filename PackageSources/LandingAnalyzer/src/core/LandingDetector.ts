@@ -20,11 +20,16 @@ const HISTORY_S = 120;
 const TRACE_BEFORE_S = 30;
 const TRACE_AFTER_MAX_S = 25;
 const TRACE_STEP_S = 0.2;
+const ARM_MIN_AIRBORNE_S = 5;
+const ARM_MIN_AGL_FT = 50;
 
 /**
  * Turns a stream of samples into landing records.
  *
- *  idle    -> armed    airborne below 200 ft AGL and descending
+ *  idle    -> armed    airborne below 200 ft AGL and descending, after a real flight: airborne
+ *                      without a break for at least 5 s and above 50 ft at some point since
+ *                      the wheels last touched (so spawn settling and ground jitter on
+ *                      SIM ON GROUND never arm it)
  *  armed   -> idle     climbs back above 500 ft (go-around)
  *  armed   -> rollout  first wheel contact
  *  rollout -> idle     ground speed below 30 kt, 90 s on the ground, or a touch-and-go climb past 100 ft
@@ -38,6 +43,10 @@ export class LandingDetector {
   private runwayPromise: Promise<RunwayEnd[]> | null = null;
   private bounces = 0;
   private airborneSince: number | null = null;
+  /** Start of the current airborne stretch (null while on the ground), for arming. */
+  private flightSince: number | null = null;
+  /** Highest AGL since the wheels last touched, for arming. */
+  private maxAglSinceGround = 0;
 
   constructor(opts: DetectorOptions) {
     this.opts = opts;
@@ -54,6 +63,8 @@ export class LandingDetector {
     this.runwayPromise = null;
     this.bounces = 0;
     this.airborneSince = null;
+    this.flightSince = null;
+    this.maxAglSinceGround = 0;
   }
 
   push(s: Sample): void {
@@ -70,10 +81,20 @@ export class LandingDetector {
       if (drop > 0) this.history.splice(0, drop);
     }
 
+    if (s.onGround) {
+      this.flightSince = null;
+      this.maxAglSinceGround = 0;
+    } else {
+      if (this.flightSince === null) this.flightSince = s.t;
+      this.maxAglSinceGround = Math.max(this.maxAglSinceGround, s.agl);
+    }
+
     switch (this.phase) {
-      case 'idle':
-        if (!s.onGround && s.agl < 200 && s.vs < 0) this.phase = 'armed';
+      case 'idle': {
+        const realFlight = this.flightSince !== null && s.t - this.flightSince >= ARM_MIN_AIRBORNE_S && this.maxAglSinceGround >= ARM_MIN_AGL_FT;
+        if (!s.onGround && realFlight && s.agl < 200 && s.vs < 0) this.phase = 'armed';
         break;
+      }
       case 'armed':
         if (!s.onGround && s.agl > 500) this.phase = 'idle';
         else if (s.onGround) this.onContact();
