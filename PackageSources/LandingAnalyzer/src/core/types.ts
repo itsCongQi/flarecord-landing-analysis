@@ -43,14 +43,16 @@ export interface RunwayEnd {
   airportIdent: string;
   /** e.g. "27L". */
   designation: string;
-  /** Landing threshold position. */
+  /** Landing threshold position (the displaced threshold where there is one). */
   thresholdLat: number;
   thresholdLon: number;
   /** Runway heading in degrees TRUE, pointing from this threshold down the runway. */
   headingTrue: number;
-  /** Usable length from this threshold, metres. */
+  /** Length from the landing threshold to the far end of the pavement, metres. */
   lengthM: number;
   widthM: number;
+  /** Pavement before the landing threshold (displaced threshold), metres. */
+  displacedM?: number;
 }
 
 export interface FlareInfo {
@@ -103,6 +105,9 @@ export interface LandingSummary {
   headwindKt: number;
   /** Positive = wind from the right. */
   crosswindKt: number;
+  /** Ambient wind at contact: direction (from, degrees true) and speed. */
+  windDirDeg?: number;
+  windKt?: number;
   bounces: number;
   touchAndGo: boolean;
   flare: FlareInfo;
@@ -121,8 +126,10 @@ export interface LandingTrace {
   ias: number[];
   elevator: number[];
   g: number[];
-  /** Centreline offset (m) during the rollout, only when a runway was matched. */
+  /** Centreline offset (m, positive = right), only when a runway was matched. */
   centerline: (number | null)[];
+  /** Distance past the landing threshold (m, negative on the approach), only when a runway was matched. */
+  along?: (number | null)[];
 }
 
 export interface LandingRecord {

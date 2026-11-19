@@ -13,9 +13,9 @@ import type { RunwayEnd } from '../core/types.ts';
  * Looks up runway ends near a position with the MSFS Avionics Framework facility loader,
  * which reads the sim's own navdata (including add-on scenery runways the sim has loaded).
  *
- * VERIFY against the msfs-sdk version bundled with the EFB API: the nearest-search signature
- * and whether OneWayRunway.course is true or magnetic. If it is magnetic, add the airport's
- * magnetic variation before matching.
+ * OneWayRunway.course is the true course. Its latitude/longitude is the landing threshold of that
+ * end, already moved in by any displaced threshold (startThresholdLength), while its length is the
+ * whole pavement. Touchdown distance is therefore measured from the landing threshold.
  */
 export class RunwayProvider {
   private readonly loader: FacilityLoader;
@@ -34,12 +34,12 @@ export class RunwayProvider {
         out.push({
           airportIdent: airport.icaoStruct?.ident ?? String(icao).slice(7).trim(),
           designation: rw.designation,
-          // OneWayRunway latitude/longitude is the landing threshold of that end.
           thresholdLat: rw.latitude,
           thresholdLon: rw.longitude,
           headingTrue: rw.course,
-          lengthM: rw.length,
+          lengthM: rw.length - (rw.startThresholdLength || 0),
           widthM: rw.width,
+          displacedM: rw.startThresholdLength || 0,
         });
       }
     }

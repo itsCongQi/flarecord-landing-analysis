@@ -2,12 +2,14 @@
 
 An in-sim landing analysis addon that runs entirely inside Microsoft Flight Simulator 2024 as a
 third-party **EFB tablet app**. No external exe, no SimConnect client. It records every approach,
-detects touchdown, bounces and the flare, scores the landing, draws graphs of the last seconds
-before touchdown, and keeps a log of past landings across sessions.
+detects touchdown, bounces and the flare, shows where the aircraft touched down on the runway,
+draws graphs of the last seconds before touchdown, and keeps a log of past landings across
+sessions. It is a monitoring and analysis tool: it reports measured values and does not rate or
+coach.
 
-Status: **prototype**. The analysis core and the log are written and tested against simulated
-landings (6 of 6 tests pass). The EFB wiring is written against the SDK's TemplateApp sample but
-has not yet been compiled against the real `efb_api` package or flown in the sim.
+Status: **prototype**. The analysis core, the log, the units and the runway drawing are tested
+against simulated landings (`npm test`). The app builds against the SDK's EFB sample and loads in
+the sim; see "Next steps" for what still needs checking in flight.
 
 > **This repository is source code, not an installable addon.** Copying it into the sim's
 > Community folder does nothing (there is no `manifest.json`, `layout.json` or built JS yet).
@@ -21,15 +23,32 @@ has not yet been compiled against the real `efb_api` package or flown in the sim
 | Wind | headwind and crosswind components at contact | from ambient wind vs heading |
 | Bounces | count of re-contacts after ≥0.2 s airborne; touch-and-go detection | |
 | Flare | flare start height and time, sink rate at flare start, pitch added, float time below 5 ft | own detector, see below |
-| Runway | airport and runway, distance past threshold, signed centreline offset, touchdown zone | via the sim's navdata (FacilityLoader) |
+| Runway | airport and runway, distance past the landing threshold (the displaced threshold where there is one), signed centreline offset, ground track | via the sim's navdata (FacilityLoader) |
 | Rollout | centreline offset through the rollout until 30 kt | |
-| Score | 0 to 100 with a per-category breakdown and a grade; one coaching tip | own weights, see below |
+| Landing index | optional single 0 to 100 figure, hidden unless switched on in Settings | own weights, see below |
 
-### Graphs (Analysis page)
+### Screens
 
-Synchronised on one time axis (seconds to touchdown), with FLARE and TD markers, zoomable to
-30 s / 15 s / 8 s: vertical speed (with a −150 fpm target line), height above ground, pitch with
-pitch-control input overlaid, indicated airspeed, plus a rollout centreline graph.
+- **Touchdown**: a top-down runway view with the touchdown point, the approach and rollout ground
+  track and the flare start, then the values measured at contact. Previous and Next step through
+  the log.
+- **Analysis**: graphs on one time axis (seconds to touchdown) with the flare start and touchdown
+  marked, zoomable to 30 s / 15 s / 8 s: vertical speed, radio altitude, pitch with elevator input
+  overlaid, indicated airspeed, plus the rollout's distance from the centreline.
+- **Log**: every landing as a table, medians, and the touchdown points of recent landings overlaid
+  on one runway outline. A row opens that landing.
+- **Settings**: units for runway distance (ft or m), height (ft or m), vertical speed (fpm or m/s)
+  and speed (kt or km/h), defaulting to feet, fpm and knots, and the landing index switch. Landings
+  are stored in fixed units and converted for display.
+
+### Runway markings
+
+The sim's runway data gives the threshold, heading, length, width and displaced threshold, but not
+the paint. The runway view therefore draws the markings at their standard positions: with
+distances in feet, the aiming point at 1,000 ft and touchdown zone bars every 500 ft to 3,000 ft;
+with distances in metres, the aiming point at 150 to 400 m depending on runway length and bars
+every 150 m to 900 m. Markings past mid-runway are left out. An airport with non-standard paint
+will differ slightly; the touchdown distance itself is measured, not drawn.
 
 ### Flare detection (this addon's own method)
 
@@ -40,29 +59,28 @@ pitch-control input overlaid, indicated airspeed, plus a rollout centreline grap
 3. Fallback, input-based: start of the final sustained pull, where smoothed elevator input last
    crossed 35% of its rise from the approach baseline to its peak.
 
-### Score (this addon's own weights)
+### Landing index (optional, this addon's own weights)
 
 Sink rate 25 · Peak G 15 · Touchdown zone 20 · Centreline 15 · Alignment 10 (crab allowance grows
 with crosswind) · Attitude 10 · No bounce 5. If no runway is identified, the runway categories
-are left out and the rest scaled to 100. A float over 4 s costs up to 10 points. Sink over
-600 fpm or over 1.8 g is always graded **Hard**.
+are left out and the rest scaled to 100. A float over 4 s costs up to 10 points.
+The index is off by default; switch it on in Settings.
 
 ### Landing log
 
 Stored in the sim's DataStore (`SetStoredData`/`GetStoredData`), which persists between sessions.
 Up to 500 landings; graphs kept for the newest 60 (about 8 KB each); the index is split into
-pages of 50 so no single key passes about 70 KB. History page shows averages, best score, a
-score trend and a filterable list; any row opens that landing. "Copy as CSV" is planned for
-moving data out of the sim.
+pages of 50 so no single key passes about 70 KB. "Copy as CSV" is planned for moving data out of
+the sim.
 
 ## How it compares with the X-Plane plugin you linked
 
 Feature parity on: touchdown stats, peak G, wind components, bounce count, runway
 identification, threshold distance, signed centreline deviation, pre-touchdown and rollout
-graphs, flare marker, landing score, automatic persistent log.
+graphs, flare marker, automatic persistent log.
 
 Different by design: own flare algorithm (attitude first, input fallback; no separate
-"pre-flare" marker yet), own score weights that include sink rate, a coaching tip, a single EFB
+"pre-flare" marker yet), no rating by default, a runway view with standard markings, a single EFB
 app instead of separate windows, DataStore log instead of a CSV file.
 
 Not included (yet): the live HUD of forces (thrust, drag, lift-to-weight). Most of those
@@ -98,11 +116,13 @@ PackageSources/LandingAnalyzer/
     types.ts           Sample, LandingSummary, LandingTrace ...
     LandingDetector.ts state machine: idle → armed (<200 ft, descending) → rollout → record
     flare.ts           flare detection
-    score.ts           scoring
+    score.ts           the optional landing index
+    units.ts           display units, settings, standard runway marking positions
     geo.ts             runway geometry, wind components, runway matching
   src/storage/         LandingLog (paged DataStore log), DataStoreAdapter
   src/sim/             SimVarSampler (20 Hz SimVar reads), RunwayProvider (FacilityLoader)
-  src/ui/              pages: Latest, Analysis, History; chartSvg (dependency-free SVG charts)
+  src/ui/              pages: Touchdown, Analysis, Log, Settings; chartSvg and runwaySvg
+                       (dependency-free SVG drawings)
   src/AnalyzerService.ts   always-on capture, started from App.install()
   src/LandingAnalyzer.tsx  EFB App + AppView registration
   README-build.md      how to drop this into the SDK's EFB sample and build it
@@ -115,6 +135,7 @@ Run the tests: `npm install && npm test` (Node 22.6+; uses Node's built-in TypeS
 
 1. Build inside the SDK EFB sample (README-build.md) and fix any `efb_api` API differences.
 2. Test flight: confirm capture with the tablet closed, the SimVar sign constants in
-   `SimVarSampler.ts`, and whether `OneWayRunway.course` is true or magnetic.
+   `SimVarSampler.ts`, and runway identification at a few airports, including one with a
+   displaced threshold.
 3. Confirm DataStore survives a sim restart (quit both ways).
-4. Then: CSV copy-out, per-aircraft filters, a "Live" page, settings (units, thresholds).
+4. Then: CSV copy-out, per-aircraft filters, runway markings chosen by region instead of by unit.

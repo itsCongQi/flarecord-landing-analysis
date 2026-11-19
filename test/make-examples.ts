@@ -39,7 +39,7 @@ async function main(): Promise<void> {
     rec.summary.id = `example${i + 1}`;
     rec.summary.example = true;
     out.push(rec);
-    console.log(`${aircraft}: score ${rec.summary.score.total} (${rec.summary.score.grade}), ${rec.summary.touchdownVsFpm} fpm`);
+    console.log(`${aircraft}: ${rec.summary.touchdownVsFpm} fpm, ${Math.round(rec.summary.geometry!.distFromThresholdM)} m from threshold`);
   }
   writeFileSync(OUT, JSON.stringify(out) + '\n');
   console.log(`wrote ${OUT.pathname}`);
