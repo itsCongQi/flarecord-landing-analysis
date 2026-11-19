@@ -5,6 +5,8 @@ import { LandingDetector } from '../PackageSources/LandingAnalyzer/src/core/Land
 import { runwayRelative, windComponents, matchRunway } from '../PackageSources/LandingAnalyzer/src/core/geo.ts';
 import { LandingLog, MemoryStore } from '../PackageSources/LandingAnalyzer/src/storage/LandingLog.ts';
 import type { LandingRecord } from '../PackageSources/LandingAnalyzer/src/core/types.ts';
+import { crossingTime, heightGates, traceAt } from '../PackageSources/LandingAnalyzer/src/core/gates.ts';
+import { stackSvg, stackTimeAt } from '../PackageSources/LandingAnalyzer/src/ui/components/chartSvg.ts';
 import { DEFAULT_SETTINGS, Units, group, parseSettings, runwayMarkings } from '../PackageSources/LandingAnalyzer/src/core/units.ts';
 import { dispersionStrip, runwayView } from '../PackageSources/LandingAnalyzer/src/ui/components/runwaySvg.ts';
 import { RUNWAY, simulate, type Scenario } from './simulate.ts';
@@ -192,4 +194,44 @@ test('log medians', async () => {
   log.add(mk('b', -300, 500, 1));
   log.add(mk('c', -200, 400, 2));
   assert.deepEqual(log.stats(), { count: 3, medianVs: -200, medianTdM: 400, medianClM: 2 });
+});
+
+test('height gates: values at the last descent through each height', async () => {
+  const [rec] = await run();
+  const tr = rec.trace!;
+  const gates = heightGates(tr, 'ft');
+  assert.deepEqual(gates.map((g) => g.height), [200, 100, 50, 30, 20, 10, null]);
+  const g50 = gates.find((g) => g.height === 50)!;
+  assert.ok(Math.abs(g50.agl - 50) < 0.5, `agl at the 50 ft gate ${g50.agl}`);
+  assert.ok(g50.t < -5 && g50.t > -12, `time ${g50.t}`);
+  assert.ok(Math.abs(g50.vs + 716) < 15 && Math.abs(g50.pitch - 2.5) < 0.2, 'still on the approach at 50 ft');
+  const g10 = gates.find((g) => g.height === 10)!;
+  assert.ok(g10.vs > g50.vs + 200 && g10.pitch > g50.pitch + 1, 'in the flare at 10 ft');
+  assert.ok(g10.along! > g50.along!, 'further down the runway');
+  assert.ok(gates.every((g, i) => i === 0 || g.t > gates[i - 1].t), 'in time order');
+  assert.equal(gates[gates.length - 1].t, 0);
+  // Metres use their own set of heights; a height above the recording is left out.
+  assert.deepEqual(heightGates(tr, 'm').map((g) => g.height), [60, 30, 15, 10, 5, 3, null]);
+  assert.equal(crossingTime(tr, 5000), null);
+  // A balloon back up through a height does not move the gate: it is the final crossing.
+  const bump: typeof tr = { ...tr, t: [-4, -3, -2, -1, 0], agl: [60, 40, 55, 30, 0] };
+  assert.ok(Math.abs(crossingTime(bump, 50)! - -1.8) < 1e-9);
+  // Interpolation between samples and clamping at the ends.
+  assert.ok(Math.abs(traceAt(tr, -8.1).agl - (tr.agl[tr.t.indexOf(-8.2)] + tr.agl[tr.t.indexOf(-8)]) / 2) < 0.06);
+  assert.equal(traceAt(tr, -999).t, tr.t[0]);
+});
+
+test('combined chart: cursor values and tap position', async () => {
+  const [rec] = await run();
+  const tr = rec.trace!;
+  const base = { t: tr.t, pxWidth: 1000, lanes: [{ label: 'RA', values: tr.agl, color: '#fff', yMin: 0, format: (v: number) => `${Math.round(v)} ft` }], gates: [{ t: -8, label: '50 ft' }] };
+  const none = stackSvg({ ...base, cursorT: null });
+  assert.ok(none.includes('>50 ft<') && !none.includes('la-cursor-value'));
+  const t50 = crossingTime(tr, 50)!;
+  assert.ok(stackSvg({ ...base, cursorT: t50 }).includes('class="la-cursor-value" dominant-baseline="middle">50 ft<'));
+  // Taps left of the plot clamp to the start, right of it to the end, the middle is the middle.
+  assert.equal(stackTimeAt(tr.t, 0), tr.t[0]);
+  assert.equal(stackTimeAt(tr.t, 1), tr.t[tr.t.length - 1]);
+  const mid = stackTimeAt(tr.t, (44 + (1080 - 44 - 86) / 2) / 1080);
+  assert.ok(Math.abs(mid - (tr.t[0] + tr.t[tr.t.length - 1]) / 2) < 1e-6);
 });
