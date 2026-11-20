@@ -1,7 +1,7 @@
 import { EventBus, Subject } from '@microsoft/msfs-sdk';
 import { mark } from './boot.ts';
 import { LandingDetector } from './core/LandingDetector.ts';
-import type { LandingRecord, LandingSummary, Sample } from './core/types.ts';
+import type { LandingSummary, Sample } from './core/types.ts';
 import { parseSettings, type Settings } from './core/units.ts';
 import { simCommBus } from './sim/CommBus.ts';
 import { RunwayProvider } from './sim/RunwayProvider.ts';
