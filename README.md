@@ -89,7 +89,8 @@ nothing if copied into Community as it is.
 3. Open the landing, tap the chart or a height row to inspect a moment, and use Previous and Next
    to step through the log.
 
-Until your first landing the app shows example data, labelled as such.
+Until your first landing the pages say that nothing is recorded yet. There is nothing to set up:
+just fly.
 
 ## Good to know
 

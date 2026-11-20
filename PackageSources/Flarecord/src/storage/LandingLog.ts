@@ -33,8 +33,6 @@ export class LandingLog {
   private readonly store: KeyValueStore;
   private index: LandingSummary[] = [];
   private readonly listeners = new Set<() => void>();
-  /** Example landings shown while the log is empty. Kept in memory only, never written. */
-  private examples: LandingRecord[] = [];
   /** Ids of landings recorded but not opened yet. Landings logged before this existed count as read. */
   private unread = new Set<string>();
 
@@ -61,19 +59,9 @@ export class LandingLog {
     this.listeners.forEach((fn) => fn());
   }
 
-  /** Set the examples to show while no real landing has been logged. */
-  setExamples(recs: LandingRecord[]): void {
-    this.examples = recs;
-  }
-
-  /** True while the list shows examples rather than real landings. */
-  get showingExamples(): boolean {
-    return this.index.length === 0 && this.examples.length > 0;
-  }
-
   /** Newest first. */
   list(): readonly LandingSummary[] {
-    return this.index.length === 0 ? this.examples.map((r) => r.summary) : this.index;
+    return this.index;
   }
 
   latest(): LandingSummary | null {
@@ -81,8 +69,6 @@ export class LandingLog {
   }
 
   getTrace(id: string): LandingTrace | null {
-    const ex = this.examples.find((r) => r.summary.id === id);
-    if (ex) return ex.trace;
     const raw = this.store.get(LandingLog.PREFIX + 'trace.' + id);
     if (!raw) return null;
     try {
