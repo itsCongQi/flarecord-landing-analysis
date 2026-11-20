@@ -2,15 +2,19 @@
 
 # Flarecord
 
-**A landing monitor for Microsoft Flight Simulator 2024 that lives on the in-sim tablet.**
+**A landing monitor for Microsoft Flight Simulator 2024, contained entirely in the sim.**
 
-Flarecord records every landing you fly and shows you exactly what happened: where you touched
-down, how the flare went, and what the aircraft was doing at each height on the way in. It runs
-entirely inside the simulator as an EFB app. There is nothing to start alongside the sim and
-nothing to connect.
+Flarecord is an addon that runs on the in-sim tablet (EFB). It records every landing you fly and
+shows exactly what happened: where you touched down, how the flare went, and what the aircraft
+was doing at each height on the way in.
 
-It is a measuring instrument. It reports what happened and leaves the judgement to you: no
-grades and no coaching.
+- **Fully in-sim.** One folder in Community. No external application to start, no connection to
+  set up, nothing running beside the simulator.
+- **Works in any aircraft that has the tablet.** Recording is automatic: fly the approach and
+  the landing is there when you open the app.
+- **Your data stays with you.** Landings are kept between sessions in plain files on your PC.
+- **A measuring instrument.** It reports what happened and leaves the judgement to you: no
+  grades and no coaching.
 
 ![The Landing page](docs/images/landing.png)
 
@@ -55,17 +59,27 @@ opened yet.
 
 ## Install
 
-Flarecord is at an early stage and there is no packaged download yet. For now it is built from
-source with the MSFS 2024 SDK:
+1. Download the latest `flarecord-landing-monitor` zip from the
+   [Releases page](https://github.com/itsCongQi/flarecord-landing-analysis/releases/latest).
+2. Extract it. You get one folder named `flarecord-landing-monitor`.
+3. Move that folder into your MSFS 2024 Community folder. Unless you chose another location
+   when installing the sim, it is here:
+   - Steam: `%APPDATA%\Microsoft Flight Simulator 2024\Packages\Community`
+   - Microsoft Store and Xbox app:
+     `%LOCALAPPDATA%\Packages\Microsoft.Limitless_8wekyb3d8bbwe\LocalCache\Packages\Community`
+4. Start the simulator and load a flight. Flarecord appears among the apps on the tablet.
 
-1. Install the MSFS 2024 SDK and its samples.
-2. Follow [`PackageSources/Flarecord/README-build.md`](PackageSources/Flarecord/README-build.md)
-   to build the package.
-3. Copy the resulting `flarecord-landing-monitor` folder into your Community folder and start the
-   sim. Flarecord appears on the tablet in every aircraft.
+The result should be `Community\flarecord-landing-monitor\manifest.json`. If there is a second
+`flarecord-landing-monitor` folder inside the first, move the inner one up.
 
-Copying this repository into the Community folder as it is does nothing, because it is source
-code and not a built package.
+**Updating.** Delete the old `flarecord-landing-monitor` folder from Community and put the new one
+in its place, with the simulator closed. Your landings are stored elsewhere and are kept.
+
+**Removing.** Delete the folder from Community. To remove your recorded landings as well, delete
+the data folder that Settings in the app shows.
+
+Use the zip from Releases, not the green Code button: this repository is source code and does
+nothing if copied into Community as it is.
 
 ## Using it
 
@@ -87,11 +101,14 @@ Until your first landing the app shows example data, labelled as such.
 - **Your data is in plain files you can back up.** Landings are saved in the simulator's work
   folder for this addon, up to 500 of them, with charts for the newest 60. Settings in the app
   shows the folder and how to back it up or move it to another PC.
-- **Still being proven in flight.** The analysis is tested against simulated landings, and the
-  app builds and loads in the sim. Recording with the tablet closed, and runway matching across
-  many airports, are still being checked.
+- **An early release.** The analysis is tested against simulated landings and the app runs in
+  the sim, but it has not seen many aircraft and airports yet. If a landing is missed or a
+  runway is not matched, please open an issue with the aircraft and airport.
 
 ## For developers
+
+To build the package yourself you need the MSFS 2024 SDK and its samples. The steps are in
+[`PackageSources/Flarecord/README-build.md`](PackageSources/Flarecord/README-build.md).
 
 The analysis core is plain TypeScript with no simulator dependencies and is tested in Node:
 
