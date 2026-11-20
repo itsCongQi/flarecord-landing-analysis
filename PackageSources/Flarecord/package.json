@@ -1,8 +1,8 @@
 {
   "name": "@efb/flarecord",
   "version": "0.1.0",
-  "license": "MIT",
-  "author": "Asobo Studio",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "author": "itsCongQi",
   "scripts": {
     "build": "node ./build.js",
     "clean": "npm run clean:dist && npm run clean:node_modules",
