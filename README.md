@@ -103,6 +103,18 @@ npm test
 Node 22.6 or newer is required. How things are measured, the flare detection method, storage,
 and notes on the MSFS 2024 EFB platform are in [docs/TECHNICAL.md](docs/TECHNICAL.md).
 
+## License
+
+Flarecord is free to use, copy, change and share for noncommercial purposes under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). Two conditions matter most:
+
+- **Credit the original project.** Anyone who gets a copy from you, changed or not, must also get
+  the license terms and the notice lines at the top of [LICENSE](LICENSE), which name this
+  project and link to it.
+- **No commercial use.** It may not be sold, bundled into a paid product or used to make money.
+
+For anything outside those terms, open an issue to ask.
+
 ## Disclaimer
 
 Flarecord is an independent project for flight simulation only. It is not affiliated with or
