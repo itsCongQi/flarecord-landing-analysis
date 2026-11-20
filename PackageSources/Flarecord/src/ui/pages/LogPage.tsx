@@ -1,6 +1,6 @@
 import type { LandingSummary } from '../../core/types';
 import { esc, fmtAgo, fmtWhen, sided, where } from '../format';
-import { EXAMPLE_NOTE, PageBase } from './PageBase';
+import { PageBase, emptyState } from './PageBase';
 
 /** Log: every recorded landing as a table. A row opens that landing; figures across landings are on Summary. */
 export class LogPage extends PageBase {
@@ -12,6 +12,10 @@ export class LogPage extends PageBase {
     const log = this.props.svc.log;
     const u = this.units;
     const all = log.list();
+    if (!all.length) {
+      el.innerHTML = `<div class="la-head"><div class="la-head-main"><div class="la-title">Landing log</div><div class="la-sub">Every landing, newest first</div></div></div>${emptyState('Each landing will be listed here and kept between sessions.')}`;
+      return;
+    }
     const rows = this.filter ? all.filter((s) => (s.aircraft + ' ' + where(s)).toLowerCase().includes(this.filter)) : all;
 
     const now = Date.now();
@@ -35,7 +39,6 @@ export class LogPage extends PageBase {
     };
 
     el.innerHTML = `
-      ${log.showingExamples ? EXAMPLE_NOTE : ''}
       <div class="la-head">
         <div class="la-head-main"><div class="la-title">Landing log</div><div class="la-sub">${rows.length} of ${all.length} landing${all.length === 1 ? '' : 's'}${unread ? ` · ${unread} new` : ''} · tap a row to open it</div></div>
         <div class="la-head-actions">

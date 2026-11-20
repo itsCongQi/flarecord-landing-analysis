@@ -5,7 +5,7 @@ import { chartSvg, stackSvg, stackTimeAt, type ChartMarker } from '../components
 import { rolloutView, runwayView, THRESHOLD } from '../components/runwaySvg';
 import { esc, fmtAgo, fmtWhen, sided } from '../format';
 import { helpBtn } from '../methods';
-import { EXAMPLE_NOTE, PageBase, titleHtml } from './PageBase';
+import { PageBase, emptyState, titleHtml } from './PageBase';
 
 const LINE = '#5ab0ff';
 const FLARE = '#e3b341';
@@ -60,7 +60,7 @@ export class LandingPage extends PageBase {
     const svc = this.props.svc;
     const s = svc.selected.get();
     if (!s) {
-      el.innerHTML = '<div class="la-empty"><div class="la-title">No landings recorded</div><p>Recording arms below 200 ft on approach and runs with the tablet closed.</p></div>';
+      el.innerHTML = `<div class="la-head"><div class="la-head-main"><div class="la-title">Landing</div><div class="la-sub">One landing in detail</div></div></div>${emptyState('Your latest landing will open here with its touchdown point, values and graphs.')}`;
       return;
     }
     // Keep what was scrolled to when a tap redraws the page; start at the top for another landing.
@@ -147,7 +147,6 @@ export class LandingPage extends PageBase {
     }
 
     el.innerHTML = `
-      ${s.example ? EXAMPLE_NOTE : ''}
       <div class="la-head">
         <div class="la-head-main">
           ${titleHtml(g ? g.runway.airportIdent : null, g ? g.runway.designation : null)}
@@ -157,7 +156,7 @@ export class LandingPage extends PageBase {
           ${u.s.index ? `<span class="la-index">INDEX ${s.score.total}</span>` : ''}
           <button class="la-btn${older ? '' : ' la-btn-off'}" data-act="older">Previous</button>
           <button class="la-btn${newer ? '' : ' la-btn-off'}" data-act="newer">Next</button>
-          ${s.example ? '' : '<button class="la-btn" data-act="delete">Delete</button>'}
+          <button class="la-btn" data-act="delete">Delete</button>
         </div>
       </div>
       ${runwayPanel}

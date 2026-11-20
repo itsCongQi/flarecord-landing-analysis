@@ -117,7 +117,23 @@ export abstract class PageBase extends UiView<PageProps> {
   }
 }
 
-export const EXAMPLE_NOTE = '<div class="la-example-note">Example data. Your own landings replace the examples after your first touchdown.</div>';
+/**
+ * Shown on a page while the log holds no landings. `where` says what will appear on that page.
+ * The mark is the app icon's flare path.
+ */
+export function emptyState(where: string): string {
+  return `<div class="la-panel la-first">
+    <svg class="la-first-mark" viewBox="0 0 64 64" width="72" height="72"><path d="M13 17L26 34Q33 43 42 43" fill="none" stroke="#e8ecf0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="43" r="5" fill="#e3b341"/></svg>
+    <div class="la-first-title">No landings recorded yet</div>
+    <div class="la-first-text">Just fly and land as you normally would. There is nothing to start or set up: Flarecord arms on its own below 200 ft on every approach and records the landing for you.</div>
+    <div class="la-first-text">${where}</div>
+    <div class="la-first-steps">
+      <span class="la-first-step"><b>1</b>Fly an approach</span>
+      <span class="la-first-step"><b>2</b>Land and slow down</span>
+      <span class="la-first-step"><b>3</b>Open Flarecord</span>
+    </div>
+  </div>`;
+}
 
 /** Screen title: airport and runway, or a plain note when no runway was matched. */
 export function titleHtml(airportIdent: string | null, designation: string | null): string {

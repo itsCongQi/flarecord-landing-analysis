@@ -4,7 +4,7 @@ import { group } from '../../core/units';
 import { stackSvg } from '../components/chartSvg';
 import { dispersionStrip } from '../components/runwaySvg';
 import { esc, fmtAgo, where } from '../format';
-import { EXAMPLE_NOTE, PageBase } from './PageBase';
+import { PageBase, emptyState } from './PageBase';
 
 const LINE = '#5ab0ff';
 const RANGES: [number, string][] = [[10, 'Last 10'], [30, 'Last 30'], [0, 'All']];
@@ -34,6 +34,10 @@ export class SummaryPage extends PageBase {
     const log = this.props.svc.log;
     const u = this.units;
     const all = log.list();
+    if (!all.length) {
+      el.innerHTML = `<div class="la-head"><div class="la-head-main"><div class="la-title">Summary</div><div class="la-sub">Figures across your landings</div></div></div>${emptyState('Your medians, touchdown points and landing by landing trend will build up here.')}`;
+      return;
+    }
     const fleet = aircraftCounts(all);
     const names = fleet.map((f) => f.aircraft);
     if (this.selection === undefined) this.selection = parseSelection(this.props.svc.getPref('summaryAircraft'));
@@ -66,7 +70,6 @@ export class SummaryPage extends PageBase {
 
     el.innerHTML = `
       ${notice}
-      ${log.showingExamples ? EXAMPLE_NOTE : ''}
       <div class="la-head">
         <div class="la-head-main"><div class="la-title">Summary</div><div class="la-sub">${shown.length} of ${all.length} landing${all.length === 1 ? '' : 's'}</div></div>
         <div class="la-head-actions"><div class="la-seg">${RANGES.map(([n, label]) => seg('la-seg-small', 'data-range', String(n), label, n === this.range)).join('')}</div></div>
