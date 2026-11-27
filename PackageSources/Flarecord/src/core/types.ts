@@ -36,7 +36,27 @@ export interface Sample {
   windDir: number;
   /** Ambient wind speed, kt. */
   windSpd: number;
+  // The values below were added with the approach recording. They are optional so recordings and
+  // test data made before then still load.
+  /** Altitude above mean sea level, feet. */
+  alt?: number;
+  /** Engine power: N1 in percent for jets, RPM for propeller aircraft (see powerKind). Average of all engines. */
+  power?: number | null;
+  /** Highest minus lowest engine, same unit as power. */
+  powerSpread?: number;
+  powerKind?: PowerKind | null;
+  /** Gear selected down, or fixed gear. */
+  gearDown?: boolean;
+  /** Flap handle position, 0 = up. */
+  flaps?: number;
+  /** Angle of attack, degrees. */
+  aoa?: number;
+  /** Wheels on the ground: 1 = left main, 2 = right main, 4 = nose, added together. */
+  wow?: number;
 }
+
+/** What the engine power figure is: N1 in percent (jets) or RPM (propeller aircraft). */
+export type PowerKind = 'n1' | 'rpm';
 
 /** One physical runway end, as used for touchdown geometry. */
 export interface RunwayEnd {
@@ -57,6 +77,8 @@ export interface RunwayEnd {
   hard?: boolean;
   /** The runway has an ILS at either end. Absent on landings recorded before this was stored. */
   ils?: boolean;
+  /** Glidepath angle of this end's own ILS, degrees, when the navdata has one. */
+  gsDeg?: number;
 }
 
 export interface FlareInfo {
@@ -124,6 +146,76 @@ export interface LandingSummary {
   flare: FlareInfo;
   geometry: TouchdownGeometry | null;
   score: ScoreBreakdown;
+  /** The approach flown to this landing. Absent on landings recorded before it was stored, or when too little of it was recorded. */
+  approach?: ApproachSummary;
+  /** Engine power at contact (see powerKind), and what it is. Absent on older landings. */
+  powerAtTd?: number | null;
+  powerKind?: PowerKind | null;
+  /** Seconds from first contact to each gear touching, null when it never did in the recording. Absent on older landings. */
+  gearContact?: { left: number | null; right: number | null; nose: number | null };
+}
+
+/** The conditions that together make an approach stable, in the order they are shown. */
+export type ConditionKey = 'config' | 'speed' | 'sink' | 'glidepath' | 'localizer' | 'bank';
+
+export interface ConditionResult {
+  key: ConditionKey;
+  /** False when it could not be measured (path conditions without a matched runway). */
+  measured: boolean;
+  /** Height above the runway from which it stayed met down to 100 ft, feet. Null when it was not met at 100 ft. */
+  fromFt: number | null;
+  /** It was met from the top of the recorded approach, so the real height is at least fromFt. */
+  top: boolean;
+}
+
+export interface ApproachSummary {
+  /** Highest height above the runway in the recorded final descent, feet (at most 3,000). */
+  topFt: number;
+  /** Height above the runway from which every measured condition stayed met down to 100 ft. Null when not stable at 100 ft. */
+  stableFt: number | null;
+  /** Stable from the top of the recording: the real figure is at least stableFt. */
+  stableAtTop: boolean;
+  /** The condition that was met last, which sets stableFt. */
+  last: ConditionKey | null;
+  conditions: ConditionResult[];
+  /** Largest glidepath deviations between 1,000 ft and 100 ft, dots (both positive numbers). Null without a runway. */
+  gsMaxAbove: number | null;
+  gsMaxBelow: number | null;
+  /** Largest lateral deviations between 1,000 ft and 100 ft, dots, left and right of the centreline. */
+  locMaxL: number | null;
+  locMaxR: number | null;
+  /** Glidepath angle the vertical deviation is measured against, and whether it is the runway's ILS. */
+  pathDeg: number;
+  ilsPath: boolean;
+  /** Engine power at 500 ft above the runway. */
+  powerAt500: number | null;
+  /** The speed the speed condition is measured against: indicated airspeed at 50 ft, kt. */
+  refIasKt: number | null;
+  /** Height above the runway passing over the landing threshold, feet. Null without a runway. */
+  thresholdFt: number | null;
+}
+
+/** The final descent, one point every 2 s, oldest first, for the Approach view. */
+export interface ApproachTrace {
+  /** Seconds to touchdown (negative). */
+  t: number[];
+  /** Height above the runway, feet. */
+  h: number[];
+  vs: number[];
+  ias: number[];
+  bank: number[];
+  power: (number | null)[];
+  /** Glidepath deviation, dots, above positive. Null without a runway. */
+  gs: (number | null)[];
+  /** Lateral deviation, dots, right positive. Null without a runway. */
+  loc: (number | null)[];
+  flaps: number[];
+  /** 1 = gear down. */
+  gear: number[];
+  /** Distance to the landing threshold, metres (positive on the approach). Null without a runway. */
+  dist: (number | null)[];
+  /** Conditions met at this point: bit n is condition n in the order of ConditionKey. */
+  met: number[];
 }
 
 /** Downsampled time series kept for the graphs. t is seconds relative to first contact. */
@@ -139,6 +231,14 @@ export interface LandingTrace {
   centerline: (number | null)[];
   /** Distance past the landing threshold (m, negative on the approach), only when a runway was matched. */
   along?: (number | null)[];
+  // Added with the approach recording; absent on older landings.
+  bank?: number[];
+  aoa?: number[];
+  gs?: number[];
+  power?: (number | null)[];
+  /** Wheels on the ground, see Sample.wow. */
+  wow?: number[];
+  approach?: ApproachTrace;
 }
 
 export interface LandingRecord {

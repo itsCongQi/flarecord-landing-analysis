@@ -12,6 +12,8 @@ export interface LandingStats {
   medianFlareFt: number | null;
   /** Landings with at least one bounce. */
   bounced: number;
+  /** Median height the approach was stable from, ft, over landings with a recorded approach that was stable by 100 ft. */
+  medianStableFt: number | null;
 }
 
 export function median(xs: number[]): number {
@@ -26,6 +28,7 @@ export function summarize(list: readonly LandingSummary[]): LandingStats | null 
   if (xs.length === 0) return null;
   const geo = xs.filter((s) => s.geometry);
   const flares = xs.filter((s) => s.flare.flareHeightFt !== null).map((s) => s.flare.flareHeightFt as number);
+  const stable = xs.filter((s) => s.approach && s.approach.stableFt !== null).map((s) => s.approach!.stableFt as number);
   return {
     count: xs.length,
     medianVs: median(xs.map((s) => s.touchdownVsFpm)),
@@ -34,6 +37,7 @@ export function summarize(list: readonly LandingSummary[]): LandingStats | null 
     medianClM: geo.length ? median(geo.map((s) => Math.abs(s.geometry!.centerlineOffsetM))) : null,
     medianFlareFt: flares.length ? median(flares) : null,
     bounced: xs.filter((s) => s.bounces > 0).length,
+    medianStableFt: stable.length ? median(stable) : null,
   };
 }
 
