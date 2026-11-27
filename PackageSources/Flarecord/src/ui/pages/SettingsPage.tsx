@@ -20,6 +20,8 @@ const DISPLAY_ROWS: typeof UNIT_ROWS = [
 export class SettingsPage extends PageBase {
   public readonly tabName = 'Settings';
   protected readonly pageClass = 'la-settings';
+  /** The Methodology section is open. Closed each time the app starts. */
+  private methodsOpen = false;
 
   protected draw(el: HTMLDivElement): void {
     const s = this.props.svc.settings.get();
@@ -40,10 +42,7 @@ export class SettingsPage extends PageBase {
       ${section('UNITS', UNIT_ROWS)}
       ${section('DISPLAY', DISPLAY_ROWS)}
       ${this.files()}
-      <div class="la-panel la-set la-methods">
-        <div class="la-set-head la-label">METHODOLOGY · how each figure is obtained</div>
-        ${METHODS.map((m) => `<div class="la-method-row"><div class="la-set-title">${m.title}</div><div class="la-method-text">${m.text}</div></div>`).join('')}
-      </div>
+      ${this.methods()}
       <div class="la-note la-set-foot">Settings are saved with the logs and apply to every aircraft. Stored landings and takeoffs are kept in fixed units and converted for display, so switching units never changes the data.</div>`;
     this.on(el, '.la-seg-btn', (b) => {
       const key = b.getAttribute('data-k') as Key;
@@ -51,6 +50,18 @@ export class SettingsPage extends PageBase {
       // Setting the value redraws every page, this one included.
       this.props.svc.setSettings({ [key]: key === 'index' ? v === 'true' : v } as Partial<Settings>);
     });
+    this.on(el, '[data-act="methods"]', () => {
+      this.methodsOpen = !this.methodsOpen;
+      this.redraw();
+    });
+  }
+
+  /** How each figure is obtained: a long read, so it stays closed until tapped, like the second-by-second table. */
+  private methods(): string {
+    const open = this.methodsOpen;
+    const head = `<div class="la-exp${open ? ' on' : ''}" data-act="methods"><i class="la-exp-mark${open ? ' on' : ''}"></i><span class="la-label">METHODOLOGY · how each figure is obtained</span><span class="la-note">tap to ${open ? 'close' : 'open'}</span></div>`;
+    const rows = open ? METHODS.map((m) => `<div class="la-method-row"><div class="la-set-title">${m.title}</div><div class="la-method-text">${m.text}</div></div>`).join('') : '';
+    return `<div class="la-panel la-set la-methods">${head}${rows}</div>`;
   }
 
   /** Where the data is kept and how to back it up, with the current state of file storage. */
