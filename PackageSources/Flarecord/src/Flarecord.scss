@@ -167,6 +167,14 @@ $thr: #c297ff;
 .la-notice-main { flex-grow: 1; flex-shrink: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; b { font-weight: 600; margin-right: 12px; } span { color: $soft; } }
 .la-btn-accent { border-color: $flare; color: $flare; }
 .la-gates .la-row-thr .la-gcol-h { color: $thr; }
+// Departure: the rotation, liftoff and runway end rows of the values-by-point table.
+.la-gates .la-pt-rot .la-gcol-h { color: $flare; }
+.la-gates .la-pt-lo .la-gcol-h { font-weight: 600; }
+.la-gates .la-pt-end .la-gcol-h { color: $thr; }
+// Log and Summary: the switch between landings and takeoffs.
+.la-kind-seg { margin-right: 20px; }
+.la-col-n2 { width: 8.2%; text-align: right; }
+.la-tag { margin-left: 8px; padding: 1px 6px; border: 1px solid $line2; border-radius: 3px; font-size: 11px; letter-spacing: 0.6px; color: $muted; }
 .la-col-rwy { width: 12%; font-weight: 500; }
 .la-col-ac { flex-grow: 1; flex-shrink: 1; width: 0; color: $soft; }
 .la-col-n0 { width: 7%; text-align: right; }

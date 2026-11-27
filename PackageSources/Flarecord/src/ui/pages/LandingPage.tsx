@@ -52,7 +52,7 @@ const signed = (v: number, digits: number) => `${v > 0 ? '+' : ''}${v.toFixed(di
  * and the values at set heights from 3,000 ft down. The Touchdown view carries one line of it.
  */
 export class LandingPage extends PageBase {
-  public readonly tabName = 'Landing';
+  public readonly tabName = 'Arrival';
   protected readonly pageClass = 'la-landing';
   private windowS = 15;
   /** Cursor time in seconds to touchdown, kept per landing. */
@@ -88,7 +88,7 @@ export class LandingPage extends PageBase {
     const svc = this.props.svc;
     const s = svc.selected.get();
     if (!s) {
-      el.innerHTML = `<div class="la-head"><div class="la-head-main"><div class="la-title">Landing</div><div class="la-sub">One landing in detail</div></div></div>${emptyState('Your latest landing will open here with its touchdown point, values and graphs.')}`;
+      el.innerHTML = `<div class="la-head"><div class="la-head-main"><div class="la-title">Arrival</div><div class="la-sub">One landing in detail</div></div></div>${emptyState('Your latest landing will open here with its touchdown point, values and graphs.')}`;
       return;
     }
     // Keep what was scrolled to when a tap redraws the page; start at the top for another landing.

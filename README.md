@@ -2,9 +2,9 @@
 
 # Flarecord
 
-**A landing monitor for Microsoft Flight Simulator 2024, contained entirely in the sim.**
+**A takeoff and landing monitor for Microsoft Flight Simulator 2024, contained entirely in the sim.**
 
-Flarecord is an addon that runs on the in-sim tablet (EFB). It records every landing you fly and
+Flarecord is an addon that runs on the in-sim tablet (EFB). It records every takeoff and landing you fly and
 shows exactly what happened: where you touched down, how the flare went, and what the aircraft
 was doing at each height on the way in.
 
@@ -16,7 +16,7 @@ was doing at each height on the way in.
 - **A measuring instrument.** It reports what happened and leaves the judgement to you: no
   grades and no coaching.
 
-![The Landing page](docs/images/landing.png)
+![The Arrival page](docs/images/landing.png)
 
 ## What you get
 
@@ -38,6 +38,11 @@ was doing at each height on the way in.
   touched first.
 - **Rollout view.** Your track after touchdown over a plain runway seen from above, to show how
   far you were from the centreline and where.
+- **Departures.** Every takeoff is recorded too, from where the roll began to 3,000 ft: the
+  ground track over the whole runway, rotation speed and rate, liftoff pitch and speed, ground
+  roll, runway ahead at liftoff and distance from the centreline, with pitch, pitch rate,
+  airspeed and elevator input on a time axis that has liftoff at zero. A Climb view shows the
+  climb by height with the gear, flap and thrust changes marked. Rejected takeoffs are logged.
 - **A log that persists.** Every landing is kept between sessions, with new ones marked until you
   open them.
 - **Summary across landings.** Medians, touchdown points overlaid on one runway, and a
@@ -47,6 +52,13 @@ was doing at each height on the way in.
   full methodology.
 
 ## Screens
+
+### Departure
+
+One takeoff in detail. The Climb switch in the header turns the page to the climb of the same
+takeoff.
+
+![The Departure page](docs/images/departure.png)
 
 ### Summary
 
@@ -88,11 +100,14 @@ nothing if copied into Community as it is.
 
 ## Using it
 
-1. Fly an approach. The status strip at the top of the app shows **MONITORING**, then **ARMED**
-   below 200 ft, then **RECORDING** through the rollout.
-2. After you slow down, open the tablet and Flarecord. Summary shows a notice for the new landing.
-3. Open the landing, tap the chart or a height row to inspect a moment, and use Previous and Next
-   to step through the log.
+1. Take off. The status strip at the top of the app shows **TAKEOFF ROLL**, then **RECORDING
+   CLIMB** until 3,000 ft. The takeoff is on the Departure tab from then on.
+2. Fly an approach. The strip shows **MONITORING**, then **ARMED** below 200 ft, then
+   **RECORDING** through the rollout.
+3. After you slow down, open the tablet and Flarecord. Summary shows a notice for the new landing.
+4. Open the landing on the Arrival tab, tap the chart or a height row to inspect a moment, and
+   use Previous and Next to step through the log. Log and Summary switch between Departures and
+   Arrivals.
 
 Until your first landing the pages say that nothing is recorded yet. There is nothing to set up:
 just fly.

@@ -141,6 +141,8 @@ export interface StackOptions {
    * the axis with whole numbers and draw a dot for every value.
    */
   sequence?: boolean;
+  /** What the time axis calls t = 0. "TD" unless given. */
+  zeroLabel?: string;
 }
 
 const STACK = { width: 1080, padL: 44, padR: 8, padT: 40, lane: 92, gap: 28, padB: 24 };
@@ -199,7 +201,7 @@ export function stackSvg(o: StackOptions): string {
   for (let t = Math.ceil(t0 / xStep) * xStep; t <= t1 + 1e-9; t += xStep) {
     const xx = x(t).toFixed(1);
     p.push(`<line x1="${xx}" x2="${xx}" y1="${padT}" y2="${bottom}" class="la-grid"/>`);
-    p.push(`<text x="${xx}" y="${bottom + 15}" class="la-axis" text-anchor="middle">${!o.sequence && t === 0 ? 'TD' : t}</text>`);
+    p.push(`<text x="${xx}" y="${bottom + 15}" class="la-axis" text-anchor="middle">${!o.sequence && t === 0 ? (o.zeroLabel ?? 'TD') : t}</text>`);
   }
 
   const cursor = o.cursorT !== null && o.cursorT >= t0 && o.cursorT <= t1 ? o.cursorT : null;

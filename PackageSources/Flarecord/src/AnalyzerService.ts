@@ -1,14 +1,15 @@
 import { EventBus, Subject } from '@microsoft/msfs-sdk';
 import { mark } from './boot.ts';
 import { LandingDetector } from './core/LandingDetector.ts';
-import type { LandingSummary, Sample } from './core/types.ts';
+import { TakeoffDetector } from './core/TakeoffDetector.ts';
+import type { LandingSummary, Sample, TakeoffSummary } from './core/types.ts';
 import { parseSettings, type Settings } from './core/units.ts';
 import { simCommBus } from './sim/CommBus.ts';
 import { RunwayProvider } from './sim/RunwayProvider.ts';
 import { SimVarSampler } from './sim/SimVarSampler.ts';
 import { DataStoreAdapter } from './storage/DataStoreAdapter.ts';
 import { FileBridge } from './storage/FileBridge.ts';
-import { LandingLog } from './storage/LandingLog.ts';
+import { LandingLog, TakeoffLog } from './storage/LandingLog.ts';
 import { MirroredStore } from './storage/MirroredStore.ts';
 
 /**
@@ -44,11 +45,15 @@ export class AnalyzerService {
   }
 
   readonly log = this.createLog();
+  /** The takeoff log, kept beside the landing log. */
+  readonly takeoffs = new TakeoffLog(this.store);
   /** Latest live sample, for the Live strip at the top of the app. */
   readonly live = Subject.create<Sample | null>(null);
   /** The landing shown on the Analysis page. */
   readonly selected = Subject.create<LandingSummary | null>(this.log.latest());
-  /** Detector phase, for a small status chip ("Armed", "Recording rollout"). */
+  /** The takeoff shown on the Departure page. */
+  readonly selectedTakeoff = Subject.create<TakeoffSummary | null>(this.takeoffs.latest());
+  /** Detector phase, for a small status chip ("Armed", "Recording rollout", "Takeoff roll"). */
   readonly phase = Subject.create<string>('idle');
 
   /** Display units and options, saved next to the log. */
@@ -67,6 +72,10 @@ export class AnalyzerService {
           if (changed) {
             const wasEmpty = this.log.list().length === 0;
             this.log.reload();
+            const hadTakeoffs = this.takeoffs.list().length > 0;
+            this.takeoffs.reload();
+            const curT = this.selectedTakeoff.get();
+            if (!hadTakeoffs || !curT || !this.takeoffs.list().some((x) => x.id === curT.id)) this.selectedTakeoff.set(this.takeoffs.latest());
             this.settings.set(parseSettings(this.store.get(SETTINGS_KEY)));
             const cur = this.selected.get();
             if (wasEmpty || !cur || !this.log.list().some((x) => x.id === cur.id)) this.selected.set(this.log.latest());
@@ -81,6 +90,7 @@ export class AnalyzerService {
   }
 
   private readonly detector: LandingDetector;
+  private readonly takeoffDetector: TakeoffDetector;
   private readonly sampler: SimVarSampler;
 
   /** The persistent log. It starts empty: the pages say so until the first landing. */
@@ -115,19 +125,31 @@ export class AnalyzerService {
         this.selected.set(rec.summary);
       },
     });
+    this.takeoffDetector = new TakeoffDetector({
+      findRunways: (lat, lon) => runways.findRunways(lat, lon),
+      aircraftName: SimVarSampler.aircraftTitle,
+      onTakeoff: (rec) => {
+        this.takeoffs.add(rec);
+        this.selectedTakeoff.set(rec.summary);
+      },
+    });
     let shownT = -1;
     this.sampler = new SimVarSampler(
       (s) => {
         this.detector.push(s);
+        this.takeoffDetector.push(s);
         // Publishing to the UI at about 4 Hz is plenty and keeps Coherent DOM work low. (Just under
         // a quarter second, so samples taken at the relaxed 4 Hz rate all get through.)
         if (s.t - shownT >= 0.2 || s.t < shownT) {
           shownT = s.t;
           this.live.set(s);
-          this.phase.set(this.detector.currentPhase);
+          // A takeoff in progress is what the status shows; otherwise the landing side.
+          const to = this.takeoffDetector.currentPhase;
+          this.phase.set(to !== 'idle' ? to : this.detector.currentPhase);
         }
       },
-      () => this.detector.wantedRateHz,
+      // Each detector says how often it needs a reading; the sampler runs at the higher of the two.
+      () => Math.max(this.detector.wantedRateHz, this.takeoffDetector.wantedRateHz),
     );
     this.sampler.start();
     // Well after the app has registered, so a problem here can never keep it off the tablet.

@@ -245,3 +245,115 @@ export interface LandingRecord {
   summary: LandingSummary;
   trace: LandingTrace | null;
 }
+
+/** One takeoff: the figures shown on the Departure page. Distances in metres, heights in feet, speeds in knots. */
+export interface TakeoffSummary {
+  id: string;
+  /** Wall-clock time (ms since epoch) when the takeoff was recorded. */
+  recordedAt: number;
+  aircraft: string;
+  /** A takeoff that left the ground, or a roll that was abandoned. */
+  kind: 'takeoff' | 'rejected';
+  /** The roll began from a landing a moment before, not from a standstill. */
+  touchAndGo: boolean;
+  runway: RunwayEnd | null;
+  /** Where the roll began, measured from the start of the pavement along the centreline. Null without a runway. */
+  startM: number | null;
+  /** Ground distance from the start of the roll to liftoff (to the highest speed on a rejected takeoff). */
+  rollM: number;
+  /** Seconds from the start of the roll to liftoff (to the highest speed on a rejected takeoff). */
+  rollS: number;
+  /** Pavement left ahead at liftoff (at the end of the recording on a rejected takeoff). Null without a runway. */
+  remainingM: number | null;
+  /** Largest distance from the centreline during the roll, positive = right, and where it was. Null without a runway. */
+  clMaxM: number | null;
+  clMaxStartM: number | null;
+  clMaxIasKt: number | null;
+  /** Distance from the centreline at liftoff, positive = right. */
+  liftoffClM: number | null;
+  /** Rotation, null when no distinct rotation was found (see findRotation). */
+  rotIasKt: number | null;
+  rotRateAvg: number | null;
+  rotRatePeak: number | null;
+  rotToLiftoffS: number | null;
+  liftoffPitchDeg: number;
+  liftoffIasKt: number;
+  liftoffGsKt: number;
+  /** Seconds after liftoff when 35 ft was passed, with the airspeed and pitch there. Null when it never was. */
+  t35S: number | null;
+  ias35Kt: number | null;
+  pitch35Deg: number | null;
+  /** Wind at liftoff against the aircraft heading; positive crosswind = from the right. */
+  headwindKt: number;
+  crosswindKt: number;
+  windDirDeg: number;
+  windKt: number;
+  /** Flap handle position at liftoff. */
+  flaps: number | null;
+  /** Engine power over the last 3 s of the roll (see powerKind). */
+  power: number | null;
+  powerKind: PowerKind | null;
+  /** The climb, absent on a rejected takeoff. */
+  climb?: ClimbSummary;
+  /** Rejected takeoff: the highest speeds reached. */
+  maxIasKt?: number;
+  maxGsKt?: number;
+}
+
+export interface ClimbSummary {
+  /** Height above the liftoff point where the recording ended, feet (at most 3,000). */
+  topFt: number;
+  /** Height passing the far end of the pavement, feet, and seconds after liftoff. Null without a runway or when not reached. */
+  runwayEndFt: number | null;
+  runwayEndS: number | null;
+  /** Height where the gear was selected up. Null for fixed gear or when it stayed down. */
+  gearUpFt: number | null;
+  /** Height of the first flap retraction step. Null when the flaps were not moved. */
+  flapFt: number | null;
+  /** Height where engine power first came clearly below its takeoff value. Null when it did not. */
+  thrustRedFt: number | null;
+  /** Largest bank below 500 ft, positive = right wing down. */
+  bankMax500: number;
+  /** Seconds from liftoff to 1,000 ft. Null when not reached. */
+  to1000S: number | null;
+  maxPitchDeg: number;
+}
+
+/** Time series of a takeoff. t is seconds relative to liftoff (to the highest speed on a rejected takeoff). */
+export interface TakeoffTrace {
+  t: number[];
+  agl: number[];
+  pitch: number[];
+  /** Pitch rate, degrees per second, nose up positive. */
+  rate: number[];
+  ias: number[];
+  gs: number[];
+  elevator: number[];
+  power: (number | null)[];
+  /** Centreline offset (m, positive = right) and distance from the start of the pavement (m). Null without a runway. */
+  centerline: (number | null)[];
+  along: (number | null)[];
+  climb?: ClimbTrace;
+}
+
+/** The climb, one point a second from liftoff. */
+export interface ClimbTrace {
+  /** Seconds after liftoff. */
+  t: number[];
+  /** Height above the liftoff point, feet. */
+  h: number[];
+  vs: number[];
+  ias: number[];
+  gs: number[];
+  pitch: number[];
+  bank: number[];
+  power: (number | null)[];
+  flaps: number[];
+  /** 1 = gear down. */
+  gear: number[];
+}
+
+export interface TakeoffRecord {
+  summary: TakeoffSummary;
+  trace: TakeoffTrace | null;
+}

@@ -1,102 +1,18 @@
 import { summarize, type LandingStats } from '../core/summary.ts';
-import type { LandingRecord, LandingSummary, LandingTrace } from '../core/types.ts';
+import type { LandingSummary, LandingTrace, TakeoffSummary, TakeoffTrace } from '../core/types.ts';
+import { MemoryStore, RecordLog, type KeyValueStore } from './RecordLog.ts';
 
-/** Minimal key/value store. In the sim this is the DataStore (GetStoredData/SetStoredData). */
-export interface KeyValueStore {
-  get(key: string): string | null;
-  set(key: string, value: string): void;
-  remove(key: string): void;
-}
+export { MemoryStore, type KeyValueStore };
 
-/**
- * Persistent landing log.
- *
- * Layout in the store (all keys prefixed so they don't clash with other addons):
- *   FLARECORD.v1.index.pages  number of index pages
- *   FLARECORD.v1.index.<n>    JSON array of up to PAGE_SIZE LandingSummary, newest first
- *   FLARECORD.v1.trace.<id>   JSON LandingTrace for one landing (loaded on demand for graphs)
- *   FLARECORD.v1.unread       JSON array of ids of landings that have not been opened yet
- *
- * Summaries are about 2 KB each and traces up to about 25 KB (measured by the tests). The SDK does
- * not document a size limit, so no single key is allowed to grow past roughly 70 KB: the index
- * is split into pages, at most MAX_SUMMARIES landings are kept, and only the newest MAX_TRACES
- * keep their graphs. Older landings stay in the list with their numbers only.
- */
-export class LandingLog {
-  static readonly PREFIX = 'FLARECORD.v1.';
+/** The persistent landing log. See RecordLog for how it is stored. */
+export class LandingLog extends RecordLog<LandingSummary, LandingTrace> {
   /** Prefix used before the app was named Flarecord. Its data is moved over on first start. */
   static readonly LEGACY_PREFIX = 'LANDAN.v1.';
-  static readonly MAX_SUMMARIES = 500;
-  static readonly MAX_TRACES = 60;
-  static readonly PAGE_SIZE = 25;
-
-  private readonly store: KeyValueStore;
-  private index: LandingSummary[] = [];
-  private readonly listeners = new Set<() => void>();
-  /** Ids of landings recorded but not opened yet. Landings logged before this existed count as read. */
-  private unread = new Set<string>();
 
   constructor(store: KeyValueStore) {
-    this.store = store;
-    this.migrateLegacy();
-    this.index = this.readIndex();
-    this.unread = this.readUnread();
-  }
-
-  isUnread(id: string): boolean {
-    return this.unread.has(id);
-  }
-
-  /** Landings not opened yet, newest first. */
-  unreadList(): LandingSummary[] {
-    return this.index.filter((s) => this.unread.has(s.id));
-  }
-
-  /** Mark a landing as opened. Does nothing (and notifies nobody) when it already was. */
-  markRead(id: string): void {
-    if (!this.unread.delete(id)) return;
-    this.writeUnread();
-    this.listeners.forEach((fn) => fn());
-  }
-
-  /** Newest first. */
-  list(): readonly LandingSummary[] {
-    return this.index;
-  }
-
-  latest(): LandingSummary | null {
-    return this.list()[0] ?? null;
-  }
-
-  getTrace(id: string): LandingTrace | null {
-    const raw = this.store.get(LandingLog.PREFIX + 'trace.' + id);
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw) as LandingTrace;
-    } catch {
-      return null;
-    }
-  }
-
-  add(rec: LandingRecord): void {
-    this.index.unshift(rec.summary);
-    this.unread.add(rec.summary.id);
-    if (rec.trace) this.store.set(LandingLog.PREFIX + 'trace.' + rec.summary.id, JSON.stringify(rec.trace));
-
-    // Prune graphs beyond MAX_TRACES and summaries beyond MAX_SUMMARIES.
-    for (let i = LandingLog.MAX_TRACES; i < this.index.length; i++) {
-      this.store.remove(LandingLog.PREFIX + 'trace.' + this.index[i].id);
-    }
-    if (this.index.length > LandingLog.MAX_SUMMARIES) this.index.length = LandingLog.MAX_SUMMARIES;
-    this.writeUnread();
-    this.writeIndex();
-  }
-
-  remove(id: string): void {
-    this.index = this.index.filter((s) => s.id !== id);
-    this.store.remove(LandingLog.PREFIX + 'trace.' + id);
-    if (this.unread.delete(id)) this.writeUnread();
-    this.writeIndex();
+    // The earlier log has to be in place before the index is read.
+    LandingLog.migrateLegacy(store);
+    super(store, '');
   }
 
   /** Medians over the logged landings (touch-and-goes excluded). */
@@ -133,138 +49,45 @@ export class LandingLog {
     return [head, ...rows].join('\n');
   }
 
-  onChange(fn: () => void): () => void {
-    this.listeners.add(fn);
-    return () => this.listeners.delete(fn);
-  }
-
-  /** Read the log again after the store was changed from outside (files loaded at start). */
-  reload(): void {
-    this.index = this.readIndex();
-    this.unread = this.readUnread();
-    this.listeners.forEach((fn) => fn());
-  }
-
-  private readIndex(): LandingSummary[] {
-    return LandingLog.readIndexFrom(this.store);
-  }
-
-  static readIndexFrom(store: KeyValueStore): LandingSummary[] {
-    const pages = Number(store.get(LandingLog.PREFIX + 'index.pages') ?? 0) || 0;
-    const out: LandingSummary[] = [];
-    for (let p = 0; p < pages; p++) {
-      const raw = store.get(LandingLog.PREFIX + 'index.' + p);
-      if (!raw) continue;
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) out.push(...parsed);
-      } catch {
-        // A damaged page loses at most PAGE_SIZE landings, not the whole log.
-      }
-    }
-    return out;
-  }
-
   /**
    * Move a log saved under the old key prefix to the current one, once. The store cannot list its
    * keys, so the known ones are walked: index pages, the traces of the landings in them, the
    * unread list, the settings and the stored preferences. Old keys are removed only after
    * everything has been copied.
    */
-  private migrateLegacy(): void {
+  private static migrateLegacy(store: KeyValueStore): void {
     const from = LandingLog.LEGACY_PREFIX;
     const to = LandingLog.PREFIX;
     try {
-      const rawPages = this.store.get(from + 'index.pages');
+      const rawPages = store.get(from + 'index.pages');
       const keys = ['settings', 'unread', 'pref.summaryAircraft'];
-      if (this.store.get(to + 'index.pages') !== null) return;
+      if (store.get(to + 'index.pages') !== null) return;
       if (rawPages !== null) {
         keys.push('index.pages');
         const pages = Number(rawPages) || 0;
         for (let p = 0; p < pages; p++) {
           keys.push('index.' + p);
           try {
-            const parsed = JSON.parse(this.store.get(from + 'index.' + p) ?? '[]');
+            const parsed = JSON.parse(store.get(from + 'index.' + p) ?? '[]');
             if (Array.isArray(parsed)) for (const s of parsed) if (s && typeof s.id === 'string') keys.push('trace.' + s.id);
           } catch {
             // A damaged page is copied as it is; its traces cannot be found.
           }
         }
       }
-      const found = keys.filter((k) => this.store.get(from + k) !== null);
-      for (const k of found) if (this.store.get(to + k) === null) this.store.set(to + k, this.store.get(from + k)!);
-      for (const k of found) this.store.remove(from + k);
+      const found = keys.filter((k) => store.get(from + k) !== null);
+      for (const k of found) if (store.get(to + k) === null) store.set(to + k, store.get(from + k)!);
+      for (const k of found) store.remove(from + k);
     } catch (e) {
       console.error('Flarecord: could not move the earlier log', e);
     }
   }
 
-  private readUnread(): Set<string> {
-    const out = new Set<string>();
-    try {
-      const parsed = JSON.parse(this.store.get(LandingLog.PREFIX + 'unread') ?? '[]');
-      const known = new Set(this.index.map((s) => s.id));
-      if (Array.isArray(parsed)) for (const id of parsed) if (typeof id === 'string' && known.has(id)) out.add(id);
-    } catch {
-      // Damaged list: everything counts as read.
-    }
-    return out;
-  }
-
-  private writeUnread(): void {
-    // Drop ids of landings that have been pruned from the log.
-    const known = new Set(this.index.map((s) => s.id));
-    Array.from(this.unread).forEach((id) => {
-      if (!known.has(id)) this.unread.delete(id);
-    });
-    if (this.unread.size === 0) this.store.remove(LandingLog.PREFIX + 'unread');
-    else this.store.set(LandingLog.PREFIX + 'unread', JSON.stringify(Array.from(this.unread)));
-  }
-
-  private writeIndex(): void {
-    LandingLog.writeIndexTo(this.store, this.index);
-    this.listeners.forEach((fn) => fn());
-  }
-
-  static writeIndexTo(store: KeyValueStore, index: readonly LandingSummary[]): void {
-    const oldPages = Number(store.get(LandingLog.PREFIX + 'index.pages') ?? 0) || 0;
-    const pages = Math.ceil(index.length / LandingLog.PAGE_SIZE);
-    for (let p = 0; p < pages; p++) {
-      const page = index.slice(p * LandingLog.PAGE_SIZE, (p + 1) * LandingLog.PAGE_SIZE);
-      store.set(LandingLog.PREFIX + 'index.' + p, JSON.stringify(page));
-    }
-    for (let p = pages; p < oldPages; p++) store.remove(LandingLog.PREFIX + 'index.' + p);
-    store.set(LandingLog.PREFIX + 'index.pages', String(pages));
-  }
-
-  /** Keys outside the index and the traces that belong to the app's saved state. */
-  static readonly EXTRA_KEYS = ['settings', 'unread', 'pref.summaryAircraft'];
-
-  /**
-   * Every key the app has in a store, without the prefix. The store cannot list its keys, so
-   * the known ones are walked: the index pages, the traces of the landings in them and the extras.
-   */
-  static keysIn(store: KeyValueStore): string[] {
-    const keys: string[] = [];
-    if (store.get(LandingLog.PREFIX + 'index.pages') !== null) keys.push('index.pages');
-    const pages = Number(store.get(LandingLog.PREFIX + 'index.pages') ?? 0) || 0;
-    for (let p = 0; p < pages; p++) if (store.get(LandingLog.PREFIX + 'index.' + p) !== null) keys.push('index.' + p);
-    for (const s of LandingLog.readIndexFrom(store)) if (store.get(LandingLog.PREFIX + 'trace.' + s.id) !== null) keys.push('trace.' + s.id);
-    for (const k of LandingLog.EXTRA_KEYS) if (store.get(LandingLog.PREFIX + k) !== null) keys.push(k);
-    return keys;
-  }
 }
 
-/** In-memory store for tests and for running the UI outside the sim. */
-export class MemoryStore implements KeyValueStore {
-  readonly data = new Map<string, string>();
-  get(key: string): string | null {
-    return this.data.get(key) ?? null;
-  }
-  set(key: string, value: string): void {
-    this.data.set(key, value);
-  }
-  remove(key: string): void {
-    this.data.delete(key);
+/** The persistent takeoff log, kept beside the landing log under its own keys. */
+export class TakeoffLog extends RecordLog<TakeoffSummary, TakeoffTrace> {
+  constructor(store: KeyValueStore) {
+    super(store, 'to.');
   }
 }
