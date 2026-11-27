@@ -157,7 +157,7 @@ export abstract class PageBase extends UiView<PageProps> {
 export function emptyState(where: string, takeoff = false): string {
   if (takeoff) {
     return `<div class="la-panel la-first">
-    <svg class="la-first-mark" viewBox="0 0 64 64" width="72" height="72"><path d="M10 43L22 43Q31 43 38 34L51 17" fill="none" stroke="#e8ecf0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="22" cy="43" r="5" fill="#e3b341"/></svg>
+    <svg class="la-first-mark" viewBox="0 0 64 64" width="72" height="72" style="width:72px;height:72px"><path d="M10 43L22 43Q31 43 38 34L51 17" fill="none" stroke="#e8ecf0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="22" cy="43" r="5" fill="#e3b341"/></svg>
     <div class="la-first-title">No takeoffs recorded yet</div>
     <div class="la-first-text">Just take off as you normally would. Flarecord notices the roll on its own and records it, from where you started to 3,000 ft.</div>
     <div class="la-first-text">${where}</div>
@@ -169,7 +169,7 @@ export function emptyState(where: string, takeoff = false): string {
   </div>`;
   }
   return `<div class="la-panel la-first">
-    <svg class="la-first-mark" viewBox="0 0 64 64" width="72" height="72"><path d="M13 17L26 34Q33 43 42 43" fill="none" stroke="#e8ecf0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="43" r="5" fill="#e3b341"/></svg>
+    <svg class="la-first-mark" viewBox="0 0 64 64" width="72" height="72" style="width:72px;height:72px"><path d="M13 17L26 34Q33 43 42 43" fill="none" stroke="#e8ecf0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="43" r="5" fill="#e3b341"/></svg>
     <div class="la-first-title">No landings recorded yet</div>
     <div class="la-first-text">Just fly and land as you normally would. There is nothing to start or set up: Flarecord arms on its own below 200 ft on every approach and records the landing for you.</div>
     <div class="la-first-text">${where}</div>
