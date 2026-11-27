@@ -110,7 +110,7 @@ export function chartSvg(o: ChartOptions): string {
 }
 
 /** A step of 1, 2, 2.5 or 5 times a power of ten that splits the range into about `n` parts. */
-function niceStep(range: number, n: number): number {
+export function niceStep(range: number, n: number): number {
   const raw = range / n;
   const mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
   const f = raw / mag;

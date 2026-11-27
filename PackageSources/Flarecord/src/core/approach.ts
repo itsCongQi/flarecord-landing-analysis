@@ -252,7 +252,8 @@ export function analyzeApproach(approach: Sample[], contact: Sample, runway: Run
     tr.ias.push(Math.round(p.s.ias));
     tr.bank.push(round1(p.s.bank));
     tr.power.push(roundOpt(p.s.power));
-    tr.gs.push(p.gs === null ? null : round2(Math.max(-9.99, Math.min(9.99, p.gs))));
+    // Close to the runway the angle to the aiming point stops meaning anything: the line ends at the floor.
+    tr.gs.push(p.gs === null || p.h < STABLE.floorFt ? null : round2(Math.max(-9.99, Math.min(9.99, p.gs))));
     tr.loc.push(p.loc === null ? null : round2(Math.max(-9.99, Math.min(9.99, p.loc))));
     tr.flaps.push(p.s.flaps ?? 0);
     tr.gear.push(p.s.gearDown ? 1 : 0);

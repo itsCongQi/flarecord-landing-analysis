@@ -507,7 +507,7 @@ test('a flight sampled at the relaxed rate until the approach still records the 
 });
 
 test('every explained figure has a title and a text', () => {
-  for (const k of ['vs', 'g', 'crab', 'wind', 'flare', 'pitchChange', 'float', 'bounces', 'height', 'position']) assert.ok(method(k), k);
+  for (const k of ['vs', 'g', 'crab', 'wind', 'flare', 'pitchChange', 'float', 'bounces', 'height', 'position', 'stable', 'deviation', 'power']) assert.ok(method(k), k);
   for (const m of METHODS) assert.ok(m.title.length > 3 && m.text.length > 40 && !m.text.includes('<'), m.key);
 });
 

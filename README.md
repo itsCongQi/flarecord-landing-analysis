@@ -31,6 +31,11 @@ was doing at each height on the way in.
   touchdown, so "what were my pitch and sink rate at 50 ft" is a single glance.
 - **Approach and flare chart.** Radio altitude, vertical speed, pitch, airspeed and elevator input
   stacked on one time axis. Tap anywhere to read every value at that moment.
+- **Approach view.** The same landing from 3,000 ft down: the height the approach was stable
+  from, which condition was met last, deviation from the glidepath and the centreline in dots,
+  and engine power. It works on any runway, with or without an ILS tuned.
+- **Second by second.** The five seconds either side of touchdown as a table, with which wheel
+  touched first.
 - **Rollout view.** Your track after touchdown over a plain runway seen from above, to show how
   far you were from the centreline and where.
 - **A log that persists.** Every landing is kept between sessions, with new ones marked until you

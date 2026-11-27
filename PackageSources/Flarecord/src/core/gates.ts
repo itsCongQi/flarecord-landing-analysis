@@ -111,3 +111,14 @@ export function thresholdCrossing(tr: LandingTrace): TracePoint | null {
   }
   return null;
 }
+
+/** One traced quantity at time t, interpolated between samples. Null when it was not recorded there. */
+export function seriesAt(ts: number[], xs: (number | null)[] | undefined, t: number): number | null {
+  if (!xs || xs.length === 0) return null;
+  const n = ts.length;
+  let i = 0;
+  while (i < n - 2 && ts[i + 1] <= t) i++;
+  const j = Math.min(i + 1, n - 1);
+  const span = ts[j] - ts[i];
+  return lerpOpt(xs, i, span > 0 ? Math.max(0, Math.min(1, (t - ts[i]) / span)) : 0);
+}
