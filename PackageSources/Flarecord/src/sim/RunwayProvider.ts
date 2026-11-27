@@ -30,6 +30,12 @@ const PAVED = [
   RunwaySurfaceType.Paint,
 ];
 
+/** The glidepath angle of an ILS, degrees, when the navdata carries a believable one. */
+function glidepathOf(ils: unknown): number | undefined {
+  const a = Number((ils as { glideslopeAngle?: number } | undefined)?.glideslopeAngle);
+  return a >= 2 && a <= 6 ? Math.round(a * 100) / 100 : undefined;
+}
+
 export class RunwayProvider {
   private readonly loader: FacilityLoader;
 
@@ -58,6 +64,7 @@ export class RunwayProvider {
           displacedM: rw.startThresholdLength || 0,
           hard: PAVED.indexOf(rw.surface) >= 0,
           ils,
+          gsDeg: glidepathOf(rw.ilsFrequency),
         });
       }
     }

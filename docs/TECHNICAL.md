@@ -61,6 +61,27 @@ An airport with non-standard paint, or scenery that differs from the rules, will
 3. Fallback, input-based: start of the final sustained pull, where smoothed elevator input last
    crossed 35% of its rise from the approach baseline to its peak.
 
+## Approach
+
+The detector keeps the airborne samples before a touchdown at two a second for up to ten minutes
+(`LandingDetector.approach`), separate from the 120 s of full-rate history. After the landing
+`core/approach.ts` analyses the final descent: back from touchdown until 3,000 ft above the
+runway, a gap in the recording, or a climb of more than 100 ft (an earlier approach).
+
+- Height is altitude minus altitude at touchdown, not radio height.
+- Glidepath deviation: angle off a path 50 ft over the landing threshold at the runway's ILS
+  angle (`FacilityILSFrequency.glideslopeAngle`) or 3.0°. One dot is 0.35°.
+- Lateral deviation: angle off the centreline seen from 1,000 ft beyond the far end. Two dots are
+  350 ft at the threshold, kept between 1.5° and 3°.
+- Conditions (limits in `STABLE`): gear down and flaps at the touchdown setting, IAS within
+  +10/-5 kt of the speed at 50 ft, sink no more than 1,000 fpm, within one dot vertically and
+  laterally, bank no more than 7°. A condition counts as held through breaks shorter than 2 s.
+  The approach is stable from the lowest height any condition was held from, down to 100 ft.
+- Engine power is N1 for jets and RPM for propeller aircraft. It is reported, not judged.
+
+Not yet verified in the sim: `GEAR IS ON GROUND` indices, `TURB ENG N1` on add-on aircraft with
+their own engine model, the gear and flap handle values on such aircraft, and the ILS angle field.
+
 ## Landing index
 
 Sink rate 25 · Peak G 15 · Touchdown zone 20 · Centreline 15 · Alignment 10 (crab allowance grows
@@ -71,8 +92,8 @@ The index is off by default; switch it on in Settings.
 ## Landing log
 
 Stored in the sim's DataStore (`SetStoredData`/`GetStoredData`), which persists between sessions.
-Up to 500 landings; graphs kept for the newest 60 (about 8 KB each); the index is split into
-pages of 50 so no single key passes about 70 KB. "Copy as CSV" is planned for moving data out of
+Up to 500 landings; graphs kept for the newest 60 (up to about 25 KB each with the approach); the index is split into
+pages of 25 so no single key passes about 70 KB. "Copy as CSV" is planned for moving data out of
 the sim.
 
 A log saved by an earlier build under the `LANDAN.v1.` key prefix is moved to `FLARECORD.v1.` on

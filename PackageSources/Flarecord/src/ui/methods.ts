@@ -69,6 +69,21 @@ export const METHODS: Method[] = [
     title: 'Runway markings and touchdown zone',
     text: 'The simulator does not provide painted markings, so they are drawn from standards: FAA rules (AC 150/5340-1) at US airports and ICAO Annex 14 elsewhere, for the length, surface and ILS status of that runway. The scenery\'s own paint may differ.',
   },
+  {
+    key: 'stable',
+    title: 'Height the approach was stable from',
+    text: 'The flight before each landing is kept at two readings a second, and the final descent is examined afterwards from 3,000 ft above the runway down to 100 ft. Six conditions are checked: gear down and the flaps at the setting they had at touchdown; indicated airspeed no more than 10 kt above or 5 kt below the speed flown at 50 ft; sink rate no more than 1,000 fpm; within one dot of the glidepath; within one dot of the centreline; bank no more than 7°. Each bar shows where its condition was met, and the figure beside it is the height from which it stayed met down to 100 ft, ignoring breaks shorter than 2 s. The approach was stable from the lowest of those heights. A plus sign means it already was at the top of the recording. Heights are altitude above the touchdown point, not radio height, which follows the terrain. Engine power is shown but is not one of the conditions.',
+  },
+  {
+    key: 'deviation',
+    title: 'Glidepath and localizer deviation',
+    text: 'Worked out from the aircraft position, not read from an ILS receiver, so it is there on every runway whatever is tuned. Vertically it is the angle off a glidepath that passes 50 ft over the landing threshold, at the angle of the runway\'s own ILS when the navigation data has one (shown as G/S) and at 3.0° otherwise (shown as PATH). One dot is 0.35°. Laterally it is the angle off the extended centreline seen from where a localizer aerial stands, 1,000 ft beyond the far end, with two dots equal to 350 ft either side at the threshold. The largest values are taken between 1,000 ft and 100 ft above the runway. On an offset or circling approach the lateral figure is large until the aircraft lines up.',
+  },
+  {
+    key: 'power',
+    title: 'Engine power',
+    text: 'For jets, N1 in percent averaged over all engines (TURB ENG N1). Propeller aircraft have no N1 and show propeller or engine RPM. The value at 500 ft is read on the final descent through 500 ft above the runway, and the value at touchdown at first wheel contact. Some add-on aircraft run their own engine model and may not fill the simulator\'s value.',
+  },
 ];
 
 const BY_KEY: { [key: string]: Method } = {};

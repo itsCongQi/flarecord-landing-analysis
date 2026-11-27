@@ -74,7 +74,7 @@ export class TabBar extends DisplayComponent<Props> {
           <span class="la-live" ref={this.ra} />
           <span class="la-live" ref={this.vs} />
           <span class="la-live" ref={this.gs} />
-          <span class="la-strip-note">Recording arms below 200 ft</span>
+          <span class="la-strip-note">Approach kept from 3,000 ft · arms below 200 ft</span>
         </div>
       </div>
     );

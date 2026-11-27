@@ -17,7 +17,7 @@ export interface KeyValueStore {
  *   FLARECORD.v1.trace.<id>   JSON LandingTrace for one landing (loaded on demand for graphs)
  *   FLARECORD.v1.unread       JSON array of ids of landings that have not been opened yet
  *
- * Summaries are about 1.3 KB each and traces about 8 KB (measured by the tests). The SDK does
+ * Summaries are about 2 KB each and traces up to about 25 KB (measured by the tests). The SDK does
  * not document a size limit, so no single key is allowed to grow past roughly 70 KB: the index
  * is split into pages, at most MAX_SUMMARIES landings are kept, and only the newest MAX_TRACES
  * keep their graphs. Older landings stay in the list with their numbers only.
@@ -28,7 +28,7 @@ export class LandingLog {
   static readonly LEGACY_PREFIX = 'LANDAN.v1.';
   static readonly MAX_SUMMARIES = 500;
   static readonly MAX_TRACES = 60;
-  static readonly PAGE_SIZE = 50;
+  static readonly PAGE_SIZE = 25;
 
   private readonly store: KeyValueStore;
   private index: LandingSummary[] = [];

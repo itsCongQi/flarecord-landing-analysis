@@ -28,6 +28,7 @@ export class LogPage extends PageBase {
         <span class="la-col la-col-date"><i class="la-new-dot${log.isUnread(s.id) ? ' on' : ''}"></i><span><span class="la-when">${fmtWhen(s.recordedAt)}</span><span class="la-ago">${fmtAgo(s.recordedAt, now)}</span></span></span>
         <span class="la-col la-col-rwy">${g ? where(s) : 'n/a'}</span>
         <span class="la-col la-col-ac">${esc(s.aircraft)}</span>
+        ${num('la-col-n0', s.approach ? (s.approach.stableFt !== null ? `${u.fmtHeight(s.approach.stableFt)}${s.approach.stableAtTop ? '+' : ''}` : `&lt; ${u.fmtHeight(100)}`) : 'n/a')}
         ${num('la-col-n1', u.fmtVs(s.touchdownVsFpm))}
         ${num('la-col-n0', s.peakG.toFixed(2))}
         ${num('la-col-n0', u.fmtSpeed(s.touchdownIasKt))}
@@ -49,7 +50,7 @@ export class LogPage extends PageBase {
       <div class="la-panel la-table">
         <div class="la-row la-row-head">
           <span class="la-col la-col-date"><i class="la-new-dot"></i>DATE</span><span class="la-col la-col-rwy">RUNWAY</span><span class="la-col la-col-ac">AIRCRAFT</span>
-          ${num('la-col-n1', `V/S ${u.vsUnit}`)}${num('la-col-n0', 'G')}${num('la-col-n0', `IAS ${u.speedUnit}`)}${num('la-col-n1', `TD POINT ${u.distUnit}`)}${num('la-col-n1', `C/L ${u.distUnit}`)}${num('la-col-n0', `FLARE ${u.heightUnit}`)}${num('la-col-n0', 'BNC')}
+          ${num('la-col-n0', `STABLE ${u.heightUnit}`)}${num('la-col-n1', `V/S ${u.vsUnit}`)}${num('la-col-n0', 'G')}${num('la-col-n0', `IAS ${u.speedUnit}`)}${num('la-col-n1', `TD POINT ${u.distUnit}`)}${num('la-col-n1', `C/L ${u.distUnit}`)}${num('la-col-n0', `FLARE ${u.heightUnit}`)}${num('la-col-n0', 'BNC')}
         </div>
         ${rows.length ? rows.map(row).join('') : '<div class="la-panel-empty">No landings match the filter.</div>'}
       </div>`;

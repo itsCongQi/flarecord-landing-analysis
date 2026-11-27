@@ -157,7 +157,7 @@ $thr: #c297ff;
 .la-row { display: flex; flex-direction: row; align-items: center; min-height: 50px; padding: 0 18px; border-bottom: 1px solid $line; font-size: 15px; margin-bottom: -1px; &:hover { background-color: $raised; } }
 .la-row-head { min-height: 42px; font-size: 12px; font-weight: 600; letter-spacing: 1px; color: $muted; &:hover { background-color: transparent; } }
 .la-col { flex-shrink: 0; box-sizing: border-box; padding-right: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.la-col-date { width: 15%; color: $muted; display: flex; flex-direction: row; align-items: center; }
+.la-col-date { width: 14%; color: $muted; display: flex; flex-direction: row; align-items: center; }
 .la-when { display: block; color: $soft; }
 .la-ago { display: block; margin-top: 2px; font-size: 12px; color: $muted; }
 // Amber dot for a landing that has not been opened yet. Read rows keep the space so columns line up.
@@ -169,8 +169,8 @@ $thr: #c297ff;
 .la-gates .la-row-thr .la-gcol-h { color: $thr; }
 .la-col-rwy { width: 12%; font-weight: 500; }
 .la-col-ac { flex-grow: 1; flex-shrink: 1; width: 0; color: $soft; }
-.la-col-n0 { width: 8%; text-align: right; }
-.la-col-n1 { width: 10.5%; text-align: right; }
+.la-col-n0 { width: 7%; text-align: right; }
+.la-col-n1 { width: 9.5%; text-align: right; }
 .la-row-head .la-col { color: $muted; font-weight: 600; }
 
 // Settings.
@@ -184,3 +184,36 @@ $thr: #c297ff;
 .la-file-ok { color: #6cc070; }
 .la-file-off { color: #e3b341; }
 .la-start-error { padding: 120px 40px 40px; p { color: $muted; margin: 10px 0 18px; } pre { white-space: pre-wrap; word-break: break-all; font-size: 13px; line-height: 19px; color: #e3b341; background-color: $panel; border: 1px solid $line; border-radius: 6px; padding: 14px 16px; } }
+
+// Landing page: the Touchdown / Approach switch and the approach pieces.
+.la-view-seg .la-seg-btn.la-btn-off { color: #4a535e; }
+// One line of approach figures on the Touchdown view. The whole line is the button.
+.la-abar { display: flex; flex-direction: row; align-items: center; min-height: 50px; padding: 0 20px; &:hover { background-color: $raised; } }
+.la-abar-title { margin-right: 28px; }
+.la-abar-go { margin-left: auto; color: $accent; font-size: 15px; white-space: nowrap; }
+.la-approach-hit { margin-top: 10px; }
+.la-approach-legend { margin: 6px 0 4px; }
+.la-chart-box .la-approach-legend .la-key { margin: 0 22px 0 0; }
+.la-key .la-key-bar { height: 8px; border-top: 0; border-radius: 2px; background-color: $accent; }
+.la-key .la-key-bar-off { background-color: $line2; }
+.la-key .la-key-band { height: 8px; border: 1px solid $line2; box-sizing: border-box; background-color: #16202b; }
+.la-key .la-key-stable { border-top: 2px dashed $ok; }
+// Approach by height: eleven columns at most.
+.la-acol-h { width: 9%; font-weight: 500; }
+.la-acol { width: 8.3%; text-align: right; }
+.la-acol-w { width: 12%; text-align: right; }
+// With an engine power column the height table's columns are a little narrower.
+.la-gates .la-gcol-p .la-gcol-h { width: 15%; }
+.la-gates .la-gcol-p .la-gcol { width: 10%; }
+.la-gates .la-gcol-p .la-gcol-w { width: 15%; }
+// Second by second: a row that opens into a table.
+.la-exp { display: flex; flex-direction: row; align-items: center; min-height: 50px; padding: 0 20px; &:hover { background-color: $raised; } .la-note { margin-left: auto; } }
+// The open/closed mark is drawn with borders: arrow glyphs are not in the tablet's font.
+.la-exp-mark { display: block; width: 0; height: 0; margin-right: 14px; border-left: 7px solid $muted; border-top: 5px solid transparent; border-bottom: 5px solid transparent; &.on { border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid $muted; border-bottom: 0; margin-right: 11px; } }
+.la-sec .la-row { min-height: 40px; &:hover { background-color: transparent; } }
+.la-sec .la-row-head { border-top: 1px solid $line; }
+.la-sec .la-row-td { background-color: $raised; .la-scol-h { font-weight: 600; } }
+.la-scol-h { width: 7%; font-weight: 500; }
+.la-scol { width: 9%; text-align: right; }
+.la-scol-w { width: 12%; text-align: right; letter-spacing: 1px; }
+.la-dim { color: $muted; }
