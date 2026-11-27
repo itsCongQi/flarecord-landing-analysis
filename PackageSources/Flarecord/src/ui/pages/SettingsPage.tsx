@@ -44,7 +44,7 @@ export class SettingsPage extends PageBase {
         <div class="la-set-head la-label">METHODOLOGY · how each figure is obtained</div>
         ${METHODS.map((m) => `<div class="la-method-row"><div class="la-set-title">${m.title}</div><div class="la-method-text">${m.text}</div></div>`).join('')}
       </div>
-      <div class="la-note la-set-foot">Settings are saved with the landing log and apply to every aircraft. Stored landings are kept in fixed units and converted for display, so switching units never changes the data.</div>`;
+      <div class="la-note la-set-foot">Settings are saved with the logs and apply to every aircraft. Stored landings and takeoffs are kept in fixed units and converted for display, so switching units never changes the data.</div>`;
     this.on(el, '.la-seg-btn', (b) => {
       const key = b.getAttribute('data-k') as Key;
       const v = b.getAttribute('data-v') ?? '';
@@ -70,16 +70,16 @@ export class SettingsPage extends PageBase {
         ${row('Status', status)}
         ${row(
           'Where the data is',
-          `Landings, graphs and settings are saved as plain files in the simulator's work folder for this addon. The simulator's own save data holds a second copy, used for fast start-up.
+          `Landings, takeoffs, graphs and settings are saved as plain files in the simulator's work folder for this addon. The simulator's own save data holds a second copy, used for fast start-up.
           <div class="la-path">%APPDATA%\\Microsoft Flight Simulator 2024\\WASM\\MSFS2024\\flarecord-landing-monitor\\work</div>
           On the Microsoft Store version the same WASM folder is under
           <div class="la-path">%LOCALAPPDATA%\\Packages\\Microsoft.Limitless_8wekyb3d8bbwe\\LocalState</div>
-          Paste a path into the address bar of File Explorer to open it. <b>index.0.json</b> and up hold the landings, 50 per file, each <b>trace.….json</b> holds the graphs of one landing, and <b>settings.json</b> holds your settings.`,
+          Paste a path into the address bar of File Explorer to open it. <b>index.0.json</b> and up hold the landings, 25 per file, and each <b>trace.….json</b> holds the graphs of one landing. Takeoffs are kept the same way in files that begin with <b>to.</b>, and <b>settings.json</b> holds your settings.`,
         )}
         ${row('Back up', 'Close the simulator, then copy the whole <b>work</b> folder somewhere safe. Updating or reinstalling Flarecord does not touch this folder, but removing the simulator can.')}
         ${row(
           'Restore or move to another PC',
-          'With the simulator closed, copy the saved files back into the <b>work</b> folder, replacing what is there, and start the simulator. Flarecord merges them with what the simulator still has: landings from both are kept, and settings come from the files.',
+          'With the simulator closed, copy the saved files back into the <b>work</b> folder, replacing what is there, and start the simulator. Flarecord merges them with what the simulator still has: landings and takeoffs from both are kept, and settings come from the files.',
         )}
       </div>`;
   }

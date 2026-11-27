@@ -34,6 +34,8 @@ export abstract class PageBase extends UiView<PageProps> {
     this.props.svc.settings.sub(() => this.changed());
     this.props.svc.selected.sub(() => this.changed());
     this.props.svc.log.onChange(() => this.changed());
+    this.props.svc.selectedTakeoff.sub(() => this.changed());
+    this.props.svc.takeoffs.onChange(() => this.changed());
     this.props.svc.fileState.sub(() => this.changed());
     // A tap anywhere else closes an open explanation.
     this.root.instance.addEventListener('click', () => {
@@ -152,7 +154,20 @@ export abstract class PageBase extends UiView<PageProps> {
  * Shown on a page while the log holds no landings. `where` says what will appear on that page.
  * The mark is the app icon's flare path.
  */
-export function emptyState(where: string): string {
+export function emptyState(where: string, takeoff = false): string {
+  if (takeoff) {
+    return `<div class="la-panel la-first">
+    <svg class="la-first-mark" viewBox="0 0 64 64" width="72" height="72"><path d="M10 43L22 43Q31 43 38 34L51 17" fill="none" stroke="#e8ecf0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="22" cy="43" r="5" fill="#e3b341"/></svg>
+    <div class="la-first-title">No takeoffs recorded yet</div>
+    <div class="la-first-text">Just take off as you normally would. Flarecord notices the roll on its own and records it, from where you started to 3,000 ft.</div>
+    <div class="la-first-text">${where}</div>
+    <div class="la-first-steps">
+      <span class="la-first-step"><b>1</b>Line up and take off</span>
+      <span class="la-first-step"><b>2</b>Climb through 3,000 ft</span>
+      <span class="la-first-step"><b>3</b>Open Flarecord</span>
+    </div>
+  </div>`;
+  }
   return `<div class="la-panel la-first">
     <svg class="la-first-mark" viewBox="0 0 64 64" width="72" height="72"><path d="M13 17L26 34Q33 43 42 43" fill="none" stroke="#e8ecf0" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="43" r="5" fill="#e3b341"/></svg>
     <div class="la-first-title">No landings recorded yet</div>
@@ -164,6 +179,15 @@ export function emptyState(where: string): string {
       <span class="la-first-step"><b>3</b>Open Flarecord</span>
     </div>
   </div>`;
+}
+
+/** Which log a page shows: landings (Arrivals) or takeoffs (Departures). */
+export type Kind = 'landings' | 'takeoffs';
+
+/** The switch between the two logs, with how many each holds. Buttons carry data-kind. */
+export function kindSwitch(kind: Kind, landings: number, takeoffs: number): string {
+  const btn = (k: Kind, label: string, n: number) => `<button class="la-seg-btn la-seg-small${k === kind ? ' on' : ''}" data-kind="${k}">${label} · ${n}</button>`;
+  return `<div class="la-seg la-kind-seg">${btn('takeoffs', 'Departures', takeoffs)}${btn('landings', 'Arrivals', landings)}</div>`;
 }
 
 /** Screen title: airport and runway, or a plain note when no runway was matched. */

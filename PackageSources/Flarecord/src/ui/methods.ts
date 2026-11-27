@@ -84,6 +84,41 @@ export const METHODS: Method[] = [
     title: 'Engine power',
     text: 'For jets, N1 in percent averaged over all engines (TURB ENG N1). Propeller aircraft have no N1 and show propeller or engine RPM. The value at 500 ft is read on the final descent through 500 ft above the runway, and the value at touchdown at first wheel contact. Some add-on aircraft run their own engine model and may not fill the simulator\'s value.',
   },
+  {
+    key: 'takeoff',
+    title: 'Takeoff recording',
+    text: 'A takeoff is noticed when ground speed passes 30 kt while still rising. The record begins where the aircraft last stood still or lined up on that heading, using the readings kept from the 40 s before, and is read 20 times a second until 10 s after liftoff. Liftoff is the first moment the simulator reports the aircraft off the ground, once it has stayed off for half a second. The climb is then kept at one reading a second up to 3,000 ft above the liftoff point, or for 3 minutes. A roll after a landing without stopping is marked as a touch-and-go.',
+  },
+  {
+    key: 'roll',
+    title: 'Ground roll and runway ahead',
+    text: 'The runway comes from the simulator\'s navigation data: the one under the aircraft at liftoff whose direction matches the ground track. Ground roll is the distance along the centreline from where the roll began to the liftoff point, and runway ahead is the distance from the liftoff point to the far end of the pavement. The centreline figure is the largest distance from the centreline with the wheels on the ground. Without a matched runway, ground roll is the ground speed added up over the roll, and the runway figures are not available.',
+  },
+  {
+    key: 'rotation',
+    title: 'Rotation start and rotation speed',
+    text: 'Pitch rate is the change in pitch over the 0.4 s around each reading. The rotation is the last stretch of pitch rate at or above 1° per second that leads up to liftoff; dips shorter than half a second do not end it. Rotation speed is the indicated airspeed at the start of that stretch. It counts only when pitch rose by at least 2° between there and liftoff, so an aircraft that is flown off in its ground attitude shows no rotation figures. No reference speeds are compared: the simulator has no VR or V2 that holds for every aircraft.',
+  },
+  {
+    key: 'rotationRate',
+    title: 'Rotation rate',
+    text: 'The average is the pitch gained between the start of the rotation and liftoff, divided by the time that took. The peak is the highest pitch rate in that time. Pitch after liftoff is not included.',
+  },
+  {
+    key: 'rejected',
+    title: 'Rejected takeoff',
+    text: 'A roll on a runway that passed 50 kt of ground speed and then slowed below 30 kt without leaving the ground. The recording ends there, so runway left is measured at 30 kt, not at a full stop. Rejected takeoffs are listed in the log and left out of the Summary figures.',
+  },
+  {
+    key: 'climb',
+    title: 'Climb heights',
+    text: 'Heights in the climb are altitude above the liftoff point, not radio height, which follows the terrain. Over runway end is the height where the track passes the far end of the pavement. Gear up is where the gear lever left the down position, and flap retraction is the first movement of the flap lever towards up. The 35 ft figures on the Takeoff view use radio height, zeroed with the wheels on the runway.',
+  },
+  {
+    key: 'thrustReduction',
+    title: 'Thrust or power reduction',
+    text: 'Takeoff power is the average over the last 3 s of the roll. The reduction is the height where power first came more than 3 points of N1 below that (4 % for RPM) and stayed there for 3 s. An aircraft whose RPM does not drop in the climb, as with a fixed-pitch propeller at full throttle, shows no figure.',
+  },
 ];
 
 const BY_KEY: { [key: string]: Method } = {};

@@ -1,6 +1,5 @@
-import type { LandingSummary } from '../core/types.ts';
 import type { FileBridge } from './FileBridge.ts';
-import { LandingLog, type KeyValueStore } from './LandingLog.ts';
+import { RecordLog, type KeyValueStore, type Logged } from './RecordLog.ts';
 
 export type FileState = 'starting' | 'active' | 'unavailable';
 
@@ -35,7 +34,7 @@ export class MirroredStore implements KeyValueStore {
   private bridge: FileBridge | null;
   private readonly prefix: string;
 
-  constructor(inner: KeyValueStore, bridge: FileBridge | null, prefix = LandingLog.PREFIX) {
+  constructor(inner: KeyValueStore, bridge: FileBridge | null, prefix = RecordLog.PREFIX) {
     this.inner = inner;
     this.bridge = bridge;
     this.prefix = prefix;
@@ -150,7 +149,7 @@ export class MirroredStore implements KeyValueStore {
   /** Write every key the DataStore holds to the files, then the revision on both sides. */
   private async pushAll(rev: number): Promise<void> {
     const bridge = this.bridge as FileBridge;
-    for (const k of LandingLog.keysIn(this.inner)) {
+    for (const k of RecordLog.keysIn(this.inner)) {
       // Keep the awaited result in a variable: the sim's JS engine cannot parse a negation placed
       // directly in front of an awaited call, and the bundler removes protective parentheses.
       const ok = await bridge.write(k, this.inner.get(this.prefix + k) ?? '');
@@ -169,40 +168,42 @@ export class MirroredStore implements KeyValueStore {
       return r.status === 'OK' ? r.value : null;
     };
 
-    // Landings from the files.
-    const fromFiles: LandingSummary[] = [];
-    const pages = Number((await take('index.pages')) ?? 0) || 0;
-    for (let p = 0; p < pages; p++) {
-      try {
-        const parsed = JSON.parse((await take('index.' + p)) ?? '[]');
-        if (Array.isArray(parsed)) for (const s of parsed) if (s && typeof s.id === 'string') fromFiles.push(s);
-      } catch {
-        // A damaged file loses its page only.
+    // Landings and takeoffs from the files.
+    for (const ns of RecordLog.NAMESPACES) {
+      const fromFiles: Logged[] = [];
+      const pages = Number((await take(ns + 'index.pages')) ?? 0) || 0;
+      for (let p = 0; p < pages; p++) {
+        try {
+          const parsed = JSON.parse((await take(ns + 'index.' + p)) ?? '[]');
+          if (Array.isArray(parsed)) for (const s of parsed) if (s && typeof s.id === 'string') fromFiles.push(s);
+        } catch {
+          // A damaged file loses its page only.
+        }
       }
-    }
-    const mine = LandingLog.readIndexFrom(this.inner);
-    const known = new Set(mine.map((s) => s.id));
-    const extra = fromFiles.filter((s) => !known.has(s.id));
-    const all = mine.concat(extra).sort((a, b) => b.recordedAt - a.recordedAt);
-    if (all.length > LandingLog.MAX_SUMMARIES) all.length = LandingLog.MAX_SUMMARIES;
-    if (extra.length > 0) {
-      LandingLog.writeIndexTo(this.inner, all);
-      changed = true;
-    }
-
-    // Graphs the DataStore lacks, for the landings that keep one.
-    for (const s of all.slice(0, LandingLog.MAX_TRACES)) {
-      const key = this.prefix + 'trace.' + s.id;
-      if (this.inner.get(key) !== null) continue;
-      const v = await take('trace.' + s.id);
-      if (v !== null) {
-        this.inner.set(key, v);
+      const mine = RecordLog.readIndexFrom(this.inner, ns);
+      const known = new Set(mine.map((s) => s.id));
+      const extra = fromFiles.filter((s) => !known.has(s.id));
+      const all = mine.concat(extra).sort((a, b) => b.recordedAt - a.recordedAt);
+      if (all.length > RecordLog.MAX_SUMMARIES) all.length = RecordLog.MAX_SUMMARIES;
+      if (extra.length > 0) {
+        RecordLog.writeIndexTo(this.inner, all, ns);
         changed = true;
+      }
+
+      // Graphs the DataStore lacks, for the records that keep one.
+      for (const s of all.slice(0, RecordLog.MAX_TRACES)) {
+        const key = this.prefix + ns + 'trace.' + s.id;
+        if (this.inner.get(key) !== null) continue;
+        const v = await take(ns + 'trace.' + s.id);
+        if (v !== null) {
+          this.inner.set(key, v);
+          changed = true;
+        }
       }
     }
 
     // Settings, the unread list and preferences: the files decide where they have a value.
-    for (const k of LandingLog.EXTRA_KEYS) {
+    for (const k of RecordLog.EXTRA_KEYS) {
       const v = await take(k);
       if (v !== null && v !== this.inner.get(this.prefix + k)) {
         this.inner.set(this.prefix + k, v);

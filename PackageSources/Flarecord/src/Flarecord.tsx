@@ -6,6 +6,7 @@ import { describe, mark } from './boot';
 import { App, AppBootMode, AppInstallProps, AppSuspendMode, AppView, AppViewProps, Efb, RequiredProps, TVNode, UiView, UiViewProps } from '@efb/efb-api';
 import { FSComponent, Subject, VNode } from '@microsoft/msfs-sdk';
 import { AnalyzerService } from './AnalyzerService';
+import { DeparturePage } from './ui/pages/DeparturePage';
 import { LandingPage } from './ui/pages/LandingPage';
 import { LogPage } from './ui/pages/LogPage';
 import { SummaryPage } from './ui/pages/SummaryPage';
@@ -57,7 +58,8 @@ class FlarecordView extends AppView<RequiredProps<AppViewProps, 'bus'>> {
         }
       });
     };
-    page('Landing', () => <LandingPage svc={svc} go={go} />);
+    page('Departure', () => <DeparturePage svc={svc} go={go} />);
+    page('Arrival', () => <LandingPage svc={svc} go={go} />);
     page('Log', () => <LogPage svc={svc} go={go} />);
     page('Summary', () => <SummaryPage svc={svc} go={go} />);
     page('Settings', () => <SettingsPage svc={svc} go={go} />);

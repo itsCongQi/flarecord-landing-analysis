@@ -1,5 +1,5 @@
 /** Figures across many landings, for the Summary page. Descriptive only: medians, not ratings. */
-import type { LandingSummary } from './types.ts';
+import type { LandingSummary, TakeoffSummary } from './types.ts';
 
 export interface LandingStats {
   count: number;
@@ -42,7 +42,7 @@ export function summarize(list: readonly LandingSummary[]): LandingStats | null 
 }
 
 /** Aircraft in the log with how many landings each has, most flown first. */
-export function aircraftCounts(list: readonly LandingSummary[]): { aircraft: string; count: number }[] {
+export function aircraftCounts(list: readonly { aircraft: string }[]): { aircraft: string; count: number }[] {
   const out: { aircraft: string; count: number }[] = [];
   for (const s of list) {
     const hit = out.find((o) => o.aircraft === s.aircraft);
@@ -78,4 +78,38 @@ export function parseSelection(raw: string | null): AircraftSelection {
   } catch {
     return null;
   }
+}
+
+export interface TakeoffStats {
+  /** Takeoffs that left the ground; touch-and-goes and rejected takeoffs are not counted. */
+  count: number;
+  rejected: number;
+  /** Medians over the takeoffs that have the figure; null when none has. */
+  medianRotRate: number | null;
+  medianRotToLiftoffS: number | null;
+  medianLiftoffPitch: number;
+  medianRollM: number;
+  /** Median of the largest distance from the centreline (either side), m. */
+  medianClM: number | null;
+  medianRemainingM: number | null;
+}
+
+/** Medians over a set of takeoffs. Null when none of them left the ground from a standstill. */
+export function summarizeTakeoffs(list: readonly TakeoffSummary[]): TakeoffStats | null {
+  const xs = list.filter((s) => s.kind === 'takeoff' && !s.touchAndGo);
+  if (xs.length === 0) return null;
+  const med = (vals: (number | null)[]) => {
+    const v = vals.filter((x): x is number => x !== null);
+    return v.length ? median(v) : null;
+  };
+  return {
+    count: xs.length,
+    rejected: list.filter((s) => s.kind === 'rejected').length,
+    medianRotRate: med(xs.map((s) => s.rotRateAvg)),
+    medianRotToLiftoffS: med(xs.map((s) => s.rotToLiftoffS)),
+    medianLiftoffPitch: median(xs.map((s) => s.liftoffPitchDeg)),
+    medianRollM: median(xs.map((s) => s.rollM)),
+    medianClM: med(xs.map((s) => (s.clMaxM === null ? null : Math.abs(s.clMaxM)))),
+    medianRemainingM: med(xs.map((s) => s.remainingM)),
+  };
 }

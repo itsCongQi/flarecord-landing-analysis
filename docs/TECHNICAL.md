@@ -82,6 +82,37 @@ runway, a gap in the recording, or a climb of more than 100 ft (an earlier appro
 Not yet verified in the sim: `GEAR IS ON GROUND` indices, `TURB ENG N1` on add-on aircraft with
 their own engine model, the gear and flap handle values on such aircraft, and the ILS angle field.
 
+## Takeoff
+
+Takeoffs are recorded by `core/TakeoffDetector.ts`, which runs beside the landing detector on the
+same samples, and analysed in `core/takeoff.ts`.
+
+- **Detection.** The roll is noticed when ground speed passes 30 kt and is at least 1 kt higher
+  than a second before. The last 40 s on the ground are kept at the idle rate, so the record
+  starts where the aircraft last stood still (below 3 kt) or came within 10° of the roll heading.
+  Liftoff is the first sample off the ground once the aircraft has stayed off for 0.5 s, after at
+  least 3 s on the ground (a bounce on landing is not a takeoff). A hop that stays below 20 ft
+  and comes back down is dropped.
+- **Sampling.** 20 Hz from the moment the roll is noticed until 10 s after liftoff, then one
+  sample a second for the climb. The 60 Hz rate used around a touchdown is never asked for. The
+  sampler runs at the higher of what the two detectors want.
+- **Rotation.** Pitch rate is the pitch change over the 0.4 s around a sample. The rotation is
+  the last stretch at or above 1°/s that leads up to liftoff (dips under 0.5 s ignored, and it may
+  end up to 3 s before liftoff). It counts only if pitch gained 2° or more by liftoff. Average
+  rate is pitch gained over time taken; peak is the highest rate in that stretch.
+- **No reference speeds.** There is no SimVar for VR or V2 that holds across aircraft
+  (`DESIGN TAKEOFF SPEED` is a fixed value from the flight model file), so none is compared.
+- **Runway.** Matched at liftoff like a landing. Distances are from the start of the pavement,
+  which is the landing threshold minus any displaced part. Without a runway, ground roll is ground
+  speed integrated over the roll.
+- **Climb.** Height is altitude above the liftoff point, followed to 3,000 ft or 3 minutes.
+  Thrust reduction is the first height where power is more than 3 points of N1 (4 % of RPM) under
+  the average of the last 3 s of the roll and stays there for 3 s.
+- **Rejected takeoff.** A roll on a matched runway that passed 50 kt and slowed below 30 kt
+  without leaving the ground. The recording ends at 30 kt.
+- **Storage.** Takeoffs use the same paged layout as landings under keys that begin with `to.`
+  (`storage/RecordLog.ts` is the shared log; `LandingLog` and `TakeoffLog` are its two uses).
+
 ## Landing index
 
 Sink rate 25 · Peak G 15 · Touchdown zone 20 · Centreline 15 · Alignment 10 (crab allowance grows

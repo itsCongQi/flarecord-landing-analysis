@@ -9,8 +9,8 @@ interface Props extends ComponentProps {
   active: Subscribable<string>;
 }
 
-const PAGES = ['Summary', 'Landing', 'Log', 'Settings'];
-const PHASE_LABEL: Record<string, string> = { idle: 'MONITORING', armed: 'ARMED', rollout: 'RECORDING' };
+const PAGES = ['Summary', 'Departure', 'Arrival', 'Log', 'Settings'];
+const PHASE_LABEL: Record<string, string> = { idle: 'MONITORING', armed: 'ARMED', rollout: 'RECORDING', roll: 'TAKEOFF ROLL', climb: 'RECORDING CLIMB' };
 
 /** Top bar: page tabs, then a status strip with the capture state and live values. */
 export class TabBar extends DisplayComponent<Props> {
@@ -74,7 +74,7 @@ export class TabBar extends DisplayComponent<Props> {
           <span class="la-live" ref={this.ra} />
           <span class="la-live" ref={this.vs} />
           <span class="la-live" ref={this.gs} />
-          <span class="la-strip-note">Approach kept from 3,000 ft · arms below 200 ft</span>
+          <span class="la-strip-note">Takeoffs and landings are recorded on their own</span>
         </div>
       </div>
     );
