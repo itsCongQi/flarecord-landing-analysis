@@ -14,25 +14,37 @@ const YOKE_SIGN = 1; // YOKE Y POSITION: +1 = full pull (verify).
 
 export class SimVarSampler {
   private timer: number | null = null;
+  private timerHz = 0;
   private lastT = -1;
-  private lastWall = 0;
 
   constructor(
     private readonly onSample: (s: Sample) => void,
-    private readonly rateHz = 20,
-    /** When this returns true the sampler runs at fastHz instead (close to and just after touchdown). */
-    private readonly fast: () => boolean = () => false,
-    private readonly fastHz = 60,
+    /**
+     * The rate wanted right now, Hz. Asked after every tick, and the timer itself is re-armed when
+     * the answer changes, so a low rate means few wake-ups, not skipped ones.
+     */
+    private readonly rate: () => number = () => 20,
   ) {}
 
   start(): void {
     if (this.timer !== null) return;
-    this.timer = window.setInterval(() => this.tick(), 1000 / this.fastHz);
+    this.arm(this.wantedHz());
   }
 
   stop(): void {
     if (this.timer !== null) window.clearInterval(this.timer);
     this.timer = null;
+  }
+
+  private wantedHz(): number {
+    const hz = this.rate();
+    return hz >= 1 && hz <= 60 ? hz : 20;
+  }
+
+  private arm(hz: number): void {
+    if (this.timer !== null) window.clearInterval(this.timer);
+    this.timerHz = hz;
+    this.timer = window.setInterval(() => this.tick(), 1000 / hz);
   }
 
   /** Sink rate the sim itself measured at the last touchdown, fpm, negative = down. */
@@ -46,14 +58,19 @@ export class SimVarSampler {
   }
 
   private tick(): void {
-    // The timer runs at the fast rate; outside a touchdown most ticks are skipped.
-    const wall = Date.now();
-    if (!this.fast() && wall - this.lastWall < 1000 / this.rateHz - 3) return;
+    try {
+      this.read();
+    } finally {
+      const hz = this.wantedHz();
+      if (this.timer !== null && hz !== this.timerHz) this.arm(hz);
+    }
+  }
+
+  private read(): void {
     const t = SimVar.GetSimVarValue('E:SIMULATION TIME', 'seconds') as number;
     // Paused, or the sim loop hasn't advanced: nothing new to record.
     if (t === this.lastT) return;
     this.lastT = t;
-    this.lastWall = wall;
     const g = (name: string, unit: string) => SimVar.GetSimVarValue(name, unit) as number;
     this.onSample({
       t,

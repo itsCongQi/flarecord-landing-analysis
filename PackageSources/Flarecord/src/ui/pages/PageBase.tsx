@@ -31,10 +31,10 @@ export abstract class PageBase extends UiView<PageProps> {
 
   onAfterRender(node: VNode): void {
     super.onAfterRender(node);
-    this.props.svc.settings.sub(() => this.redraw());
-    this.props.svc.selected.sub(() => this.redraw());
-    this.props.svc.log.onChange(() => this.redraw());
-    this.props.svc.fileState.sub(() => this.redraw());
+    this.props.svc.settings.sub(() => this.changed());
+    this.props.svc.selected.sub(() => this.changed());
+    this.props.svc.log.onChange(() => this.changed());
+    this.props.svc.fileState.sub(() => this.changed());
     // A tap anywhere else closes an open explanation.
     this.root.instance.addEventListener('click', () => {
       if (this.helpTapped) this.helpTapped = false;
@@ -46,12 +46,43 @@ export abstract class PageBase extends UiView<PageProps> {
   // Drawings are sized in pixels from the page width, which is only known once the page is shown.
   public onOpen(): void {
     super.onOpen();
+    this.showing = true;
     this.redraw();
   }
 
   public onResume(): void {
     super.onResume();
+    this.showing = true;
     this.redraw();
+  }
+
+  public onPause(): void {
+    super.onPause();
+    this.showing = false;
+  }
+
+  public onClose(): void {
+    super.onClose();
+    this.showing = false;
+  }
+
+  /** True between onOpen/onResume and onPause/onClose: the page is the one on screen. */
+  private showing = false;
+  private redrawQueued = false;
+
+  /**
+   * Something the page shows has changed. A page that is not on screen is left alone: it is drawn
+   * afresh when it is opened or resumed anyway. One landing changes several things at once (the
+   * log, the selection), so the page on screen is redrawn once for all of them, a moment later.
+   * This keeps the end of a rollout from rebuilding every page, drawings included, twice over.
+   */
+  protected changed(): void {
+    if (!this.showing || this.redrawQueued) return;
+    this.redrawQueued = true;
+    setTimeout(() => {
+      this.redrawQueued = false;
+      if (this.showing) this.redraw();
+    }, 0);
   }
 
   protected redraw(): void {

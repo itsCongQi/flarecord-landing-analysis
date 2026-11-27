@@ -26,6 +26,12 @@ const ARM_MIN_AGL_FT = 50;
 export const FIT_WINDOW_S = 0.5;
 /** How long after contact the sampler is asked to keep its fast rate, seconds. */
 const FAST_AFTER_CONTACT_S = 3;
+/** Sampling rates asked of the sampler, Hz. See LandingDetector.wantedRateHz. */
+export const RATE_FAST_HZ = 60;
+export const RATE_NORMAL_HZ = 20;
+export const RATE_RELAXED_HZ = 4;
+/** Above this height (or on the ground) with no landing in progress, the relaxed rate is enough, feet. */
+const RELAXED_ABOVE_AGL_FT = 1500;
 
 /**
  * Turns a stream of samples into landing records.
@@ -72,6 +78,22 @@ export class LandingDetector {
     return this.history[this.history.length - 1].t - this.history[this.contactIdx].t < FAST_AFTER_CONTACT_S;
   }
 
+  /**
+   * How often the sampler should read the sim, Hz. The work done on the sim's UI thread follows
+   * this, so it is kept as low as each stage needs:
+   *
+   *   fast     armed, and for a few seconds after contact: the contact instant and the load peak
+   *   relaxed  nothing in progress, and on the ground or well above it (taxi, climb, cruise):
+   *            only arming is watched, which needs seconds, not milliseconds
+   *   normal   everything else: low approach before arming, and the rest of the rollout
+   */
+  get wantedRateHz(): number {
+    if (this.wantsFastSampling) return RATE_FAST_HZ;
+    const last = this.history[this.history.length - 1];
+    if (this.phase === 'idle' && last && (last.onGround || last.agl > RELAXED_ABOVE_AGL_FT)) return RATE_RELAXED_HZ;
+    return RATE_NORMAL_HZ;
+  }
+
   reset(): void {
     this.history = [];
     this.phase = 'idle';
@@ -102,7 +124,11 @@ export class LandingDetector {
       this.flightSince = null;
       this.maxAglSinceGround = 0;
       // Standing or taxiing slowly: note what the height reads with the wheels on the ground.
-      if (s.gs < 5) this.parkedOffset = this.parkedOffset === null ? s.agl : this.parkedOffset + 0.05 * (s.agl - this.parkedOffset);
+      // Smoothed over about a second of standing still, whatever the sampling rate.
+      if (s.gs < 5) {
+        const k = prev ? Math.min(1, Math.max(0, s.t - prev.t)) : 1;
+        this.parkedOffset = this.parkedOffset === null ? s.agl : this.parkedOffset + k * (s.agl - this.parkedOffset);
+      }
     } else {
       if (this.flightSince === null) this.flightSince = s.t;
       this.maxAglSinceGround = Math.max(this.maxAglSinceGround, s.agl);

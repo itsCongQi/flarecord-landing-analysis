@@ -41,12 +41,21 @@ export class TabBar extends DisplayComponent<Props> {
     const values = () => {
       const s = svc.live.get();
       const u = new Units(svc.settings.get());
-      this.ra.instance.textContent = s ? `RA ${u.fmtHeight(Math.max(0, s.agl))} ${u.heightUnit}` : 'RA --';
-      this.vs.instance.textContent = s ? `V/S ${u.fmtVs(s.vs)} ${u.vsUnit}` : 'V/S --';
-      this.gs.instance.textContent = s ? `GS ${u.fmtSpeed(s.gs)} ${u.speedUnit}` : 'GS --';
+      // Only touch the page when the text really changes: every write costs a layout pass.
+      this.put(0, this.ra.instance, s ? `RA ${u.fmtHeight(Math.max(0, s.agl))} ${u.heightUnit}` : 'RA --');
+      this.put(1, this.vs.instance, s ? `V/S ${u.fmtVs(s.vs)} ${u.vsUnit}` : 'V/S --');
+      this.put(2, this.gs.instance, s ? `GS ${u.fmtSpeed(s.gs)} ${u.speedUnit}` : 'GS --');
     };
     svc.live.sub(values);
     svc.settings.sub(values, true);
+  }
+
+  private readonly shown: string[] = [];
+
+  private put(i: number, el: HTMLElement, text: string): void {
+    if (this.shown[i] === text) return;
+    this.shown[i] = text;
+    el.textContent = text;
   }
 
   render(): VNode {

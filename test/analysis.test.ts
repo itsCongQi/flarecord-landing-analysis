@@ -461,6 +461,51 @@ test('fast sampling is requested from arming until shortly after contact', () =>
   assert.equal(at(contactT + 5), false);
 });
 
+test('sampling rate: relaxed on the ground and high up, normal on a low approach, fast around touchdown', () => {
+  const det = new LandingDetector({ onLanding: () => undefined });
+  assert.equal(det.wantedRateHz, 20, 'before the first sample');
+  const base = simulate()[0];
+  const at = (over: Partial<typeof base>) => {
+    det.reset();
+    det.push({ ...base, ...over });
+    return det.wantedRateHz;
+  };
+  assert.equal(at({ agl: 9000, onGround: false }), 4, 'cruise');
+  assert.equal(at({ agl: 3, onGround: true, gs: 12 }), 4, 'taxi');
+  assert.equal(at({ agl: 1200, onGround: false }), 20, 'approach below 1,500 ft');
+
+  // A whole approach and landing: never relaxed until it is over, fast around contact.
+  det.reset();
+  const rates: number[] = [];
+  let contactAt = -1;
+  const samples = simulate();
+  samples.forEach((s, i) => {
+    det.push(s);
+    if (contactAt < 0 && det.currentPhase === 'rollout') contactAt = i;
+    rates.push(det.wantedRateHz);
+  });
+  assert.equal(rates[0], 20);
+  assert.equal(rates[contactAt - 1], 60);
+  assert.equal(rates[contactAt], 60);
+  assert.ok(rates.slice(0, contactAt).every((r) => r >= 20), 'no relaxed sampling on the way down');
+  assert.equal(rates[rates.length - 1], 4, 'relaxed again once the landing is recorded');
+});
+
+test('a flight sampled at the relaxed rate until the approach still records the landing', async () => {
+  // Parked, then airborne and high at 4 Hz, as the sampler would deliver it, then the approach.
+  const out: LandingRecord[] = [];
+  const det = new LandingDetector({ onLanding: (r) => out.push(r) });
+  const approach = simulate();
+  const first = approach[0];
+  let t = first.t - 120;
+  for (; t < first.t - 100; t += 0.25) det.push({ ...first, t, agl: 6, vs: 0, gs: 0, onGround: true });
+  for (; t < first.t - 1e-6; t += 0.25) det.push({ ...first, t, agl: 3000, vs: -700, onGround: false });
+  for (const s of approach) det.push(s);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(out.length, 1);
+  assert.equal(out[0].trace!.t[0], -30, 'the graph still starts 30 s before touchdown');
+});
+
 test('every explained figure has a title and a text', () => {
   for (const k of ['vs', 'g', 'crab', 'wind', 'flare', 'pitchChange', 'float', 'bounces', 'height', 'position']) assert.ok(method(k), k);
   for (const m of METHODS) assert.ok(m.title.length > 3 && m.text.length > 40 && !m.text.includes('<'), m.key);
