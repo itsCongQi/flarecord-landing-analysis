@@ -1,3 +1,4 @@
+import { analyzeApproach } from './approach.ts';
 import { detectFlare } from './flare.ts';
 import { angleDiff, matchRunway, runwayRelative, windComponents } from './geo.ts';
 import { scoreLanding } from './score.ts';
@@ -26,6 +27,15 @@ const ARM_MIN_AGL_FT = 50;
 export const FIT_WINDOW_S = 0.5;
 /** How long after contact the sampler is asked to keep its fast rate, seconds. */
 const FAST_AFTER_CONTACT_S = 3;
+/** Sampling rates asked of the sampler, Hz. See LandingDetector.wantedRateHz. */
+export const RATE_FAST_HZ = 60;
+export const RATE_NORMAL_HZ = 20;
+export const RATE_RELAXED_HZ = 4;
+/** Above this height (or on the ground) with no landing in progress, the relaxed rate is enough, feet. */
+const RELAXED_ABOVE_AGL_FT = 1500;
+/** The approach is kept at this spacing for this long, for the approach analysis, seconds. */
+const APPROACH_STEP_S = 0.5;
+const APPROACH_KEEP_S = 600;
 
 /**
  * Turns a stream of samples into landing records.
@@ -41,6 +51,11 @@ const FAST_AFTER_CONTACT_S = 3;
 export class LandingDetector {
   private readonly opts: DetectorOptions;
   private history: Sample[] = [];
+  /**
+   * The flight before a touchdown at two samples a second, kept much longer than `history`: the
+   * approach from 3,000 ft takes several minutes. Emptied on the ground.
+   */
+  private approach: Sample[] = [];
   private phase: Phase = 'idle';
   private contactIdx = -1;
   private contactSimVs: number | null = null;
@@ -72,8 +87,25 @@ export class LandingDetector {
     return this.history[this.history.length - 1].t - this.history[this.contactIdx].t < FAST_AFTER_CONTACT_S;
   }
 
+  /**
+   * How often the sampler should read the sim, Hz. The work done on the sim's UI thread follows
+   * this, so it is kept as low as each stage needs:
+   *
+   *   fast     armed, and for a few seconds after contact: the contact instant and the load peak
+   *   relaxed  nothing in progress, and on the ground or well above it (taxi, climb, cruise):
+   *            only arming is watched, which needs seconds, not milliseconds
+   *   normal   everything else: low approach before arming, and the rest of the rollout
+   */
+  get wantedRateHz(): number {
+    if (this.wantsFastSampling) return RATE_FAST_HZ;
+    const last = this.history[this.history.length - 1];
+    if (this.phase === 'idle' && last && (last.onGround || last.agl > RELAXED_ABOVE_AGL_FT)) return RATE_RELAXED_HZ;
+    return RATE_NORMAL_HZ;
+  }
+
   reset(): void {
     this.history = [];
+    this.approach = [];
     this.phase = 'idle';
     this.contactIdx = -1;
     this.runwayPromise = null;
@@ -98,11 +130,31 @@ export class LandingDetector {
       if (drop > 0) this.history.splice(0, drop);
     }
 
+    if (this.phase !== 'rollout') {
+      if (s.onGround) {
+        // Standing or taxiing: there is no approach to keep. (The contact sample of a landing is
+        // handled below, before the next sample gets here.)
+        if (this.phase === 'idle' && this.approach.length > 0) this.approach = [];
+      } else {
+        const lastA = this.approach[this.approach.length - 1];
+        if (!lastA || s.t - lastA.t >= APPROACH_STEP_S - 1e-3) {
+          this.approach.push(s);
+          let old = 0;
+          while (old < this.approach.length && this.approach[old].t < s.t - APPROACH_KEEP_S) old++;
+          if (old > 0) this.approach.splice(0, old);
+        }
+      }
+    }
+
     if (s.onGround) {
       this.flightSince = null;
       this.maxAglSinceGround = 0;
       // Standing or taxiing slowly: note what the height reads with the wheels on the ground.
-      if (s.gs < 5) this.parkedOffset = this.parkedOffset === null ? s.agl : this.parkedOffset + 0.05 * (s.agl - this.parkedOffset);
+      // Smoothed over about a second of standing still, whatever the sampling rate.
+      if (s.gs < 5) {
+        const k = prev ? Math.min(1, Math.max(0, s.t - prev.t)) : 1;
+        this.parkedOffset = this.parkedOffset === null ? s.agl : this.parkedOffset + k * (s.agl - this.parkedOffset);
+      }
     } else {
       if (this.flightSince === null) this.flightSince = s.t;
       this.maxAglSinceGround = Math.max(this.maxAglSinceGround, s.agl);
@@ -152,18 +204,20 @@ export class LandingDetector {
     const ci = this.contactIdx;
     const runwaysP = this.runwayPromise ?? Promise.resolve([]);
     const simVs = this.contactSimVs;
+    const approach = this.approach;
+    this.approach = [];
     this.phase = 'idle';
     this.history = samples.slice(-5);
     this.contactIdx = -1;
     this.runwayPromise = null;
     const bounces = this.bounces;
     void runwaysP.then((runways) => {
-      this.opts.onLanding(this.build(samples, ci, runways, touchAndGo, bounces, simVs));
+      this.opts.onLanding(this.build(samples, ci, runways, touchAndGo, bounces, simVs, approach));
     });
   }
 
   /** Build the record. Public for tests. */
-  build(raw: Sample[], ci: number, runways: RunwayEnd[], touchAndGo: boolean, bounces: number, simVs: number | null): LandingRecord {
+  build(raw: Sample[], ci: number, runways: RunwayEnd[], touchAndGo: boolean, bounces: number, simVs: number | null, approachSamples: Sample[] = []): LandingRecord {
     // Zero the height for this aircraft, so 0 ft is wheels on the ground whatever the airframe.
     const offset = groundOffset(raw, ci, this.parkedOffset);
     const samples = offset === 0 ? raw : raw.map((s) => ({ ...s, agl: s.agl - offset }));
@@ -212,6 +266,10 @@ export class LandingDetector {
       geometry,
     });
 
+    const app = analyzeApproach(approachSamples, contact, runway);
+    const trace = buildTrace(samples, contactT, runway);
+    if (app) trace.approach = app.trace;
+
     const now = this.opts.now?.() ?? Date.now();
     return {
       summary: {
@@ -237,8 +295,11 @@ export class LandingDetector {
         flare,
         geometry,
         score,
+        ...(app ? { approach: app.summary } : {}),
+        ...(contact.power !== undefined ? { powerAtTd: contact.power === null ? null : round1(contact.power), powerKind: contact.powerKind ?? null } : {}),
+        ...(contact.wow !== undefined ? { gearContact: gearContact(samples, ci) } : {}),
       },
-      trace: buildTrace(samples, contactT, runway),
+      trace,
     };
   }
 }
@@ -289,6 +350,15 @@ export function groundOffset(samples: Sample[], ci: number, parked: number | nul
   return parked ?? samples[ci].agl;
 }
 
+/** Seconds from first contact to each gear touching, from the wheels-on-ground flags. */
+export function gearContact(samples: Sample[], ci: number): { left: number | null; right: number | null; nose: number | null } {
+  const first = (bit: number): number | null => {
+    for (let i = ci; i < samples.length; i++) if ((samples[i].wow ?? 0) & bit) return Math.round((samples[i].t - samples[ci].t) * 100) / 100;
+    return null;
+  };
+  return { left: first(1), right: first(2), nose: first(4) };
+}
+
 function round1(x: number): number {
   return Math.round(x * 10) / 10;
 }
@@ -296,6 +366,9 @@ function round1(x: number): number {
 /** Resample to a fixed 5 Hz grid from 30 s before contact to the end of the rollout (max 25 s). */
 export function buildTrace(samples: Sample[], contactT: number, runway: RunwayEnd | null): LandingTrace {
   const tr: LandingTrace = { t: [], agl: [], vs: [], pitch: [], ias: [], elevator: [], g: [], centerline: [], along: [] };
+  // The values added with the approach recording are stored only when the samples carry them.
+  const extra = samples[samples.length - 1].wow !== undefined;
+  if (extra) Object.assign(tr, { bank: [], aoa: [], gs: [], power: [], wow: [] });
   const endT = Math.min(samples[samples.length - 1].t, contactT + TRACE_AFTER_MAX_S);
   let j = 0;
   for (let t = Math.max(samples[0].t, contactT - TRACE_BEFORE_S); t <= endT + 1e-6; t += TRACE_STEP_S) {
@@ -308,6 +381,13 @@ export function buildTrace(samples: Sample[], contactT: number, runway: RunwayEn
     tr.ias.push(Math.round(s.ias));
     tr.elevator.push(Math.round(s.elevator * 100) / 100);
     tr.g.push(Math.round(s.g * 100) / 100);
+    if (extra) {
+      tr.bank!.push(round1(s.bank));
+      tr.aoa!.push(round1(s.aoa ?? 0));
+      tr.gs!.push(Math.round(s.gs));
+      tr.power!.push(s.power === null || s.power === undefined ? null : round1(s.power));
+      tr.wow!.push(s.wow ?? 0);
+    }
     // The whole ground track relative to the runway, approach included, for the runway view.
     const rel = runway ? runwayRelative(runway, s.lat, s.lon) : null;
     tr.centerline.push(rel ? round1(rel.cross) : null);

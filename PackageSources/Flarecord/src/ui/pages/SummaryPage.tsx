@@ -75,7 +75,7 @@ export class SummaryPage extends PageBase {
         <div class="la-head-actions"><div class="la-seg">${RANGES.map(([n, label]) => seg('la-seg-small', 'data-range', String(n), label, n === this.range)).join('')}</div></div>
       </div>
       ${fleet.length > 1 ? this.aircraftFilter(fleet, sel, ticked) : ''}
-      <div class="la-panel la-cells la-cells-7">
+      <div class="la-panel la-cells la-cells-4">
         ${cell('LANDINGS', String(st?.count ?? 0))}
         ${cell('MEDIAN V/S', st ? u.fmtVs(st.medianVs) : 'n/a', st ? u.vsUnit : '')}
         ${cell('MEDIAN LOAD', st ? st.medianG.toFixed(2) : 'n/a', st ? 'g' : '')}
@@ -83,6 +83,7 @@ export class SummaryPage extends PageBase {
         ${cell('MEDIAN C/L', st && st.medianClM !== null ? group(u.dist(st.medianClM)) : 'n/a', st && st.medianClM !== null ? u.distUnit : '')}
         ${cell('MEDIAN FLARE', st && st.medianFlareFt !== null ? u.fmtHeight(st.medianFlareFt) : 'n/a', st && st.medianFlareFt !== null ? u.heightUnit : '')}
         ${cell('WITH A BOUNCE', st ? String(st.bounced) : 'n/a', st ? `of ${st.count}` : '')}
+        ${cell('MEDIAN STABLE FROM', st && st.medianStableFt !== null ? u.fmtHeight(st.medianStableFt) : 'n/a', st && st.medianStableFt !== null ? u.heightUnit : '')}
       </div>
       ${strip ? `<div class="la-panel la-rw-panel"><div class="la-panel-head"><span class="la-label">TOUCHDOWN DISPERSION · ALL RUNWAYS OVERLAID</span><span class="la-note">Distance from each runway's own threshold and centreline</span></div>${strip}</div>` : ''}
       ${
@@ -186,6 +187,10 @@ export class SummaryPage extends PageBase {
         { label: `TOUCHDOWN POINT · ${u.distUnit} from threshold`, values: seq.map((s) => (s.geometry ? u.dist(s.geometry.distFromThresholdM) : null)), color: LINE, yMin: 0, format: (v) => String(v) },
         { label: `CENTRELINE OFFSET · ${u.distUnit}, right positive`, values: seq.map((s) => (s.geometry ? u.dist(s.geometry.centerlineOffsetM) : null)), color: LINE, format: (v) => String(v) },
         { label: `FLARE HEIGHT · ${u.heightUnit}`, values: seq.map((s) => (s.flare.flareHeightFt !== null ? u.height(s.flare.flareHeightFt) : null)), color: LINE, yMin: 0, format: (v) => String(v) },
+        // Only once a landing with a recorded approach is in the selection.
+        ...(seq.some((s) => s.approach && s.approach.stableFt !== null)
+          ? [{ label: `APPROACH STABLE FROM · ${u.heightUnit} above the runway`, values: seq.map((s) => (s.approach && s.approach.stableFt !== null ? u.height(s.approach.stableFt) : null)), color: LINE, yMin: 0, format: (v: number) => String(v) }]
+          : []),
       ],
     });
   }

@@ -119,15 +119,15 @@ export class AnalyzerService {
     this.sampler = new SimVarSampler(
       (s) => {
         this.detector.push(s);
-        // Publishing to the UI at 4 Hz is plenty and keeps Coherent DOM work low.
-        if (s.t - shownT >= 0.25 || s.t < shownT) {
+        // Publishing to the UI at about 4 Hz is plenty and keeps Coherent DOM work low. (Just under
+        // a quarter second, so samples taken at the relaxed 4 Hz rate all get through.)
+        if (s.t - shownT >= 0.2 || s.t < shownT) {
           shownT = s.t;
           this.live.set(s);
           this.phase.set(this.detector.currentPhase);
         }
       },
-      20,
-      () => this.detector.wantsFastSampling,
+      () => this.detector.wantedRateHz,
     );
     this.sampler.start();
     // Well after the app has registered, so a problem here can never keep it off the tablet.
