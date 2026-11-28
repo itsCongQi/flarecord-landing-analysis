@@ -1,7 +1,7 @@
 {
   "name": "flarecord-landing-monitor",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MSFS 2024 EFB app that records and analyses every landing in-sim",
   "scripts": {
     "test": "node --experimental-strip-types --no-warnings --test test/*.test.ts"
