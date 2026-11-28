@@ -219,6 +219,7 @@ $thr: #c297ff;
 .la-exp { display: flex; flex-direction: row; align-items: center; min-height: 50px; padding: 0 20px; &:hover { background-color: $raised; } .la-note { margin-left: auto; } }
 // The open/closed mark is drawn with borders: arrow glyphs are not in the tablet's font.
 .la-exp-mark { display: block; width: 0; height: 0; margin-right: 14px; border-left: 7px solid $muted; border-top: 5px solid transparent; border-bottom: 5px solid transparent; &.on { border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid $muted; border-bottom: 0; margin-right: 11px; } }
+.la-methods .la-exp.on { border-bottom: 1px solid $line; }
 .la-sec .la-row { min-height: 40px; &:hover { background-color: transparent; } }
 .la-sec .la-row-head { border-top: 1px solid $line; }
 .la-sec .la-row-td { background-color: $raised; .la-scol-h { font-weight: 600; } }
