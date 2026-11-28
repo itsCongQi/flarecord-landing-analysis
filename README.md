@@ -33,7 +33,9 @@ was doing at each height on the way in.
   stacked on one time axis. Tap anywhere to read every value at that moment.
 - **Approach view.** The same landing from 3,000 ft down: the height the approach was stable
   from, which condition was met last, deviation from the glidepath and the centreline in dots,
-  and engine power. It works on any runway, with or without an ILS tuned.
+  and engine power. Stable means gear and landing flap set, speed within +10/-5 kt, sink no more
+  than 1,000 fpm, within 1.5 dots of the glidepath and the centreline, and bank no more than 7°.
+  It works on any runway, with or without an ILS tuned.
 - **Second by second.** The five seconds either side of touchdown as a table, with which wheel
   touched first.
 - **Rollout view.** Your track after touchdown over a plain runway seen from above, to show how
@@ -43,10 +45,10 @@ was doing at each height on the way in.
   roll, runway ahead at liftoff and distance from the centreline, with pitch, pitch rate,
   airspeed and elevator input on a time axis that has liftoff at zero. A Climb view shows the
   climb by height with the gear, flap and thrust changes marked. Rejected takeoffs are logged.
-- **A log that persists.** Every landing is kept between sessions, with new ones marked until you
-  open them.
-- **Summary across landings.** Medians, touchdown points overlaid on one runway, and a
-  landing-by-landing trend, for all aircraft or the ones you tick.
+- **A log that persists.** Every takeoff and landing is kept between sessions, with new ones
+  marked until you open them.
+- **Summary across flights.** Medians, touchdown points overlaid on one runway, and a
+  landing-by-landing or takeoff-by-takeoff trend, for all aircraft or the ones you tick.
 - **Your units.** Feet or metres, fpm or m/s, knots or km/h.
 - **Methods on show.** A "?" next to a figure explains how it was obtained, and Settings lists the
   full methodology.
@@ -62,15 +64,15 @@ takeoff.
 
 ### Summary
 
-Opens first. Figures across your last 10, last 30 or all landings, filtered by aircraft, with a
-notice when a new landing is waiting.
+Opens first. Figures across your last 10, last 30 or all landings or takeoffs, filtered by
+aircraft, with a notice when a new takeoff or landing is waiting.
 
 ![The Summary page](docs/images/summary.png)
 
 ### Log
 
-Every landing as a table, newest first, with a filter. An amber dot marks a landing you have not
-opened yet.
+Every landing or takeoff as a table, newest first, with a filter. An amber dot marks one you
+have not opened yet.
 
 ![The Log page](docs/images/log.png)
 
@@ -89,8 +91,10 @@ opened yet.
 The result should be `Community\flarecord-landing-monitor\manifest.json`. If there is a second
 `flarecord-landing-monitor` folder inside the first, move the inner one up.
 
+**What changed.** Each release is described in [CHANGELOG.md](CHANGELOG.md).
+
 **Updating.** Delete the old `flarecord-landing-monitor` folder from Community and put the new one
-in its place, with the simulator closed. Your landings are stored elsewhere and are kept.
+in its place, with the simulator closed. Your takeoffs and landings are stored elsewhere and are kept.
 
 **Removing.** Delete the folder from Community. To remove your recorded landings as well, delete
 the data folder that Settings in the app shows.
@@ -101,7 +105,8 @@ nothing if copied into Community as it is.
 ## Using it
 
 1. Take off. The status strip at the top of the app shows **TAKEOFF ROLL**, then **RECORDING
-   CLIMB** until 3,000 ft. The takeoff is on the Departure tab from then on.
+   CLIMB** until 3,000 ft. The takeoff is on the Departure tab from then on, and Summary shows
+   a notice for it.
 2. Fly an approach. The strip shows **MONITORING**, then **ARMED** below 200 ft, then
    **RECORDING** through the rollout.
 3. After you slow down, open the tablet and Flarecord. Summary shows a notice for the new landing.
@@ -119,7 +124,7 @@ just fly.
   airports and ICAO rules elsewhere, scaled to the runway. Scenery that differs will not match.
 - **Runway identification comes from the sim's navigation data.** If no runway is matched, the
   landing is still recorded, without the runway views.
-- **Your data is in plain files you can back up.** Landings are saved in the simulator's work
+- **Your data is in plain files you can back up.** Takeoffs and landings are saved in the simulator's work
   folder for this addon, up to 500 of them, with charts for the newest 60. Settings in the app
   shows the folder and how to back it up or move it to another PC.
 - **An early release.** The analysis is tested against simulated landings and the app runs in
