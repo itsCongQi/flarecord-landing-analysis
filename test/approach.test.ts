@@ -154,6 +154,27 @@ test('a condition left for under two seconds still counts, a longer one does not
   assert.equal(sl.last, 'bank');
 });
 
+test('glidepath and centreline are allowed one and a half dots', () => {
+  // Metres right of the centreline that read as one dot at 850 ft on the 3 degree path.
+  const dotM = 1 / localizerDots(RUNWAY, AIM_M - 850 / FT_PER_M / TAN3, 1);
+  const inBand = (h: number) => h < 900 && h > 800;
+  // 1.3 dots high and 1.3 dots right for a good while: inside the limit.
+  const inside = fly({ gsErr: (h) => (inBand(h) ? 1.3 * 0.35 : 0), cross: (h) => (inBand(h) ? 1.3 * dotM : 0) });
+  const si = analyzeApproach(inside.approach, inside.contact, RUNWAY)!.summary;
+  assert.equal(si.stableAtTop, true);
+  assert.equal(si.last, null);
+
+  const high = fly({ gsErr: (h) => (inBand(h) ? 1.7 * 0.35 : 0) });
+  const sh = analyzeApproach(high.approach, high.contact, RUNWAY)!.summary;
+  near(sh.stableFt, 800, 10, 'stable once back within 1.5 dots of the glidepath');
+  assert.equal(sh.last, 'glidepath');
+
+  const wide = fly({ cross: (h) => (inBand(h) ? -1.7 * dotM : 0) });
+  const sw = analyzeApproach(wide.approach, wide.contact, RUNWAY)!.summary;
+  near(sw.stableFt, 800, 10, 'stable once back within 1.5 dots of the centreline');
+  assert.equal(sw.last, 'localizer');
+});
+
 test('deviation maxima are taken between 1,000 ft and 100 ft, each side on its own', () => {
   const { approach, contact } = fly({
     // 2 dots low high up (not counted), 0.5 dot high around 700 ft, 0.3 dot low around 300 ft.

@@ -4,6 +4,8 @@ import { group } from '../../core/units';
 import { stackSvg } from '../components/chartSvg';
 import { dispersionStrip } from '../components/runwaySvg';
 import { esc, fmtAgo, where } from '../format';
+
+const wherePlace = (s: TakeoffSummary) => (s.runway ? `${s.runway.airportIdent} ${s.runway.designation}` : 'No runway');
 import { PageBase, emptyState, kindSwitch, type Kind } from './PageBase';
 
 const LINE = '#5ab0ff';
@@ -29,6 +31,8 @@ export class SummaryPage extends PageBase {
   private search = '';
   /** Newest unread landing whose notice was dismissed; a later landing shows the notice again. */
   private dismissedId = '';
+  /** The same for takeoffs. */
+  private dismissedTakeoffId = '';
   /** Which log the figures are drawn from. */
   private kind: Kind = 'landings';
 
@@ -72,17 +76,11 @@ export class SummaryPage extends PageBase {
     const seq: LandingSummary[] = landings.filter((s) => !s.touchAndGo).reverse();
     const what = takeoffs ? 'takeoff' : 'landing';
 
-    // Landings recorded but not opened yet: a notice that opens the newest one.
-    const unread = log.unreadList();
-    const fresh = unread.length && unread[0].id !== this.dismissedId ? unread[0] : null;
-    const notice = fresh
-      ? `<div class="la-notice">
-          <i class="la-new-dot on"></i>
-          <div class="la-notice-main"><b>${unread.length === 1 ? 'New landing recorded' : `${unread.length} new landings recorded`}</b><span>${unread.length === 1 ? '' : 'Latest: '}${esc(where(fresh))} · ${esc(fresh.aircraft)} · ${fmtAgo(fresh.recordedAt)}</span></div>
-          <button class="la-btn la-btn-small la-btn-accent" data-act="open-new">Open landing</button>
-          <button class="la-btn la-btn-small" data-act="dismiss-new">Dismiss</button>
-        </div>`
-      : '';
+    // Records not opened yet: one notice per log that opens the newest one, newest log first.
+    const landingNotice = this.newNotice('landing', log.unreadList(), this.dismissedId, where);
+    const takeoffNotice = this.newNotice('takeoff', this.props.svc.takeoffs.unreadList(), this.dismissedTakeoffId, wherePlace);
+    const notices = [landingNotice, takeoffNotice].filter((n): n is NonNullable<typeof n> => n !== null).sort((a, b) => b.at - a.at);
+    const notice = notices.map((n) => n.html).join('');
 
     el.innerHTML = `
       ${notice}
@@ -117,13 +115,21 @@ export class SummaryPage extends PageBase {
     el.scrollTop = scroll;
     onKind();
 
-    this.on(el, '[data-act="open-new"]', () => {
-      if (!fresh) return;
-      this.props.svc.selected.set(fresh);
-      this.props.go('Arrival');
+    this.on(el, '[data-act="open-new"]', (b) => {
+      if (b.getAttribute('data-what') === 'takeoff') {
+        if (!takeoffNotice) return;
+        this.props.svc.selectedTakeoff.set(takeoffNotice.fresh);
+        this.props.go('Departure');
+      } else {
+        if (!landingNotice) return;
+        this.props.svc.selected.set(landingNotice.fresh);
+        this.props.go('Arrival');
+      }
     });
-    this.on(el, '[data-act="dismiss-new"]', () => {
-      if (fresh) this.dismissedId = fresh.id;
+    this.on(el, '[data-act="dismiss-new"]', (b) => {
+      if (b.getAttribute('data-what') === 'takeoff') {
+        if (takeoffNotice) this.dismissedTakeoffId = takeoffNotice.fresh.id;
+      } else if (landingNotice) this.dismissedId = landingNotice.fresh.id;
       this.redraw();
     });
     this.on(el, '[data-range]', (b) => {
@@ -157,6 +163,23 @@ export class SummaryPage extends PageBase {
     search?.addEventListener('input', applySearch);
     search?.addEventListener('change', applySearch);
     if (this.search) applySearch();
+  }
+
+  /**
+   * The notice for records not opened yet, or null when there are none or the newest one was
+   * dismissed. `unread` is newest first.
+   */
+  private newNotice<S extends LandingSummary | TakeoffSummary>(what: 'landing' | 'takeoff', unread: S[], dismissedId: string, place: (s: S) => string): { fresh: S; at: number; html: string } | null {
+    const fresh = unread.length && unread[0].id !== dismissedId ? unread[0] : null;
+    if (!fresh) return null;
+    const n = unread.length;
+    const html = `<div class="la-notice">
+          <i class="la-new-dot on"></i>
+          <div class="la-notice-main"><b>${n === 1 ? `New ${what} recorded` : `${n} new ${what}s recorded`}</b><span>${n === 1 ? '' : 'Latest: '}${esc(place(fresh))} · ${esc(fresh.aircraft)} · ${fmtAgo(fresh.recordedAt)}</span></div>
+          <button class="la-btn la-btn-small la-btn-accent" data-act="open-new" data-what="${what}">Open ${what}</button>
+          <button class="la-btn la-btn-small" data-act="dismiss-new" data-what="${what}">Dismiss</button>
+        </div>`;
+    return { fresh, at: fresh.recordedAt, html };
   }
 
   private aircraftFilter(fleet: { aircraft: string; count: number }[], sel: AircraftSelection, ticked: (name: string) => boolean, what = 'landing'): string {

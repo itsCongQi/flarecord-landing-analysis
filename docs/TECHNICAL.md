@@ -74,7 +74,7 @@ runway, a gap in the recording, or a climb of more than 100 ft (an earlier appro
 - Lateral deviation: angle off the centreline seen from 1,000 ft beyond the far end. Two dots are
   350 ft at the threshold, kept between 1.5° and 3°.
 - Conditions (limits in `STABLE`): gear down and flaps at the touchdown setting, IAS within
-  +10/-5 kt of the speed at 50 ft, sink no more than 1,000 fpm, within one dot vertically and
+  +10/-5 kt of the speed at 50 ft, sink no more than 1,000 fpm, within 1.5 dots vertically and
   laterally, bank no more than 7°. A condition counts as held through breaks shorter than 2 s.
   The approach is stable from the lowest height any condition was held from, down to 100 ft.
 - Engine power is N1 for jets and RPM for propeller aircraft. It is reported, not judged.

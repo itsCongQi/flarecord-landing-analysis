@@ -27,7 +27,7 @@ export const STABLE = {
   /** Greatest sink rate, fpm. */
   sinkFpm: 1000,
   /** Greatest glidepath and lateral deviation, dots. */
-  dots: 1,
+  dots: 1.5,
   /** Greatest bank, degrees. */
   bankDeg: 7,
   /** A condition left for less than this long still counts as met, seconds. */

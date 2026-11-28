@@ -1,4 +1,4 @@
-import { CONDITION_LABEL } from '../../core/approach';
+import { CONDITION_LABEL, STABLE } from '../../core/approach';
 import { heightGates, seriesAt, thresholdCrossing, traceAt, type Gate, type TracePoint } from '../../core/gates';
 import type { ApproachSummary, ApproachTrace, LandingSummary, LandingTrace, PowerKind } from '../../core/types';
 import { group, type Units } from '../../core/units';
@@ -489,7 +489,7 @@ export class LandingPage extends PageBase {
         <div class="la-legend la-approach-legend">
           <span class="la-key"><i class="la-key-bar"></i>Condition met</span>
           <span class="la-key"><i class="la-key-bar la-key-bar-off"></i>Not met</span>
-          ${hasPath ? '<span class="la-key"><i class="la-key-band"></i>Within 1 dot</span>' : ''}
+          ${hasPath ? '<span class="la-key"><i class="la-key-band"></i>Within ${STABLE.dots} dots</span>' : ''}
           ${a.stableFt !== null ? '<span class="la-key"><i class="la-key-stable"></i>Stable from here down</span>' : ''}
         </div>
       </div>
